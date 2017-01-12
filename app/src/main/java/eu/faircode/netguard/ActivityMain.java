@@ -795,6 +795,10 @@ public class ActivityMain extends AppCompatActivity implements SharedPreferences
                     startActivity(new Intent(this, ActivityPro.class));
                 return true;
 
+            case R.id.menu_analysis:
+                startActivity(new Intent(this, ActivityAnalysis.class));
+                return true;
+
             case R.id.menu_settings:
                 startActivity(new Intent(this, ActivitySettings.class));
                 return true;

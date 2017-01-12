@@ -1257,6 +1257,8 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
 
     ssize_t res = write(args->tun, buffer, len);
 
+    // TODO: Analyse tcp packet and save results in DB
+
     // Write pcap record
     if (res >= 0) {
         if (pcap_file != NULL)

@@ -1,24 +1,5 @@
 package eu.faircode.netguard;
 
-/*
-    This file is part of NetGuard.
-
-    NetGuard is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
-
-    NetGuard is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with NetGuard.  If not, see <http://www.gnu.org/licenses/>.
-
-    Copyright 2015-2016 by Marcel Bokhorst (M66B)
-*/
-
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -57,7 +38,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class ActivityAnalysis extends AppCompatActivity implements SharedPreferences.OnSharedPreferenceChangeListener {
-    private static final String TAG = "NetGuard.Log";
+    private static final String TAG = "NetGuard.Analysis";
 
     private boolean running = false;
     private ListView lvLog;
@@ -92,7 +73,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         running = true;
 
         // Action bar
-        View actionView = getLayoutInflater().inflate(R.layout.actionlog, null, false);
+        View actionView = getLayoutInflater().inflate(R.layout.actionanalysis, null, false);
         SwitchCompat swEnabled = (SwitchCompat) actionView.findViewById(R.id.swEnabled);
 
         getSupportActionBar().setDisplayShowCustomEnabled(true);
@@ -105,6 +86,8 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         resolve = prefs.getBoolean("resolve", false);
         organization = prefs.getBoolean("organization", false);
+
+        // TODO: change to correct perference
         boolean log = prefs.getBoolean("log", false);
 
         // Show disabled message

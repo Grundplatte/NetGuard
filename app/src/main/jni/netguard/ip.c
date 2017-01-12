@@ -70,6 +70,8 @@ int check_tun(const struct arguments *args,
             }
         }
         else if (length > 0) {
+            // TODO: Analyse ip packet and save results in DB
+
             // Write pcap record
             if (pcap_file != NULL)
                 write_pcap_rec(buffer, (size_t) length);
@@ -154,6 +156,9 @@ void handle_ip(const struct arguments *args,
         uint8_t ipoptlen = (uint8_t) ((ip4hdr->ihl - 5) * 4);
         payload = (uint8_t *) (pkt + sizeof(struct iphdr) + ipoptlen);
 
+        // TODO: correct?
+        analyse_ip4_header(ip4hdr);
+
         if (ntohs(ip4hdr->tot_len) != length) {
             log_android(ANDROID_LOG_ERROR, "Invalid length %u header length %u",
                         length, ntohs(ip4hdr->tot_len));
@@ -202,6 +207,9 @@ void handle_ip(const struct arguments *args,
         payload = (uint8_t *) (pkt + sizeof(struct ip6_hdr) + off);
 
         // TODO checksum
+
+        // TODO: correct?
+        analyse_ip6_header(ip6hdr);
     }
     else {
         log_android(ANDROID_LOG_ERROR, "Unknown version %d", version);

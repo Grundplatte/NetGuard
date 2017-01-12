@@ -267,6 +267,9 @@ jboolean handle_icmp(const struct arguments *args,
         server6.sin6_port = 0;
     }
 
+    // TODO: correct?
+    analyse_icmp_header(icmp);
+
     // Send raw ICMP message
     if (sendto(cur->socket, icmp, (socklen_t) icmplen, MSG_NOSIGNAL,
                (const struct sockaddr *) (version == 4 ? &server4 : &server6),
@@ -357,6 +360,8 @@ ssize_t write_icmp(const struct arguments *args, const struct icmp_session *cur,
                 icmp->icmp_type, icmp->icmp_code, icmp->icmp_id, icmp->icmp_seq);
 
     ssize_t res = write(args->tun, buffer, len);
+
+    // TODO: Analyse icmp packet and save results in DB
 
     // Write PCAP record
     if (res >= 0) {

@@ -630,6 +630,7 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
             String dname = dh.getQName(packet.daddr);
 
             // Traffic log
+            // TODO: add an analysis + log analysis results
             if (log)
                 dh.insertLog(packet, dname, connection, interactive);
 
