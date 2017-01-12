@@ -88,17 +88,17 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         organization = prefs.getBoolean("organization", false);
 
         // TODO: change to correct perference analysis
-        boolean log = prefs.getBoolean("log", false);
+        boolean analysis = prefs.getBoolean("analysis", false);
 
         // Show disabled message
         TextView tvDisabled = (TextView) findViewById(R.id.tvDisabled);
-        tvDisabled.setVisibility(log ? View.GONE : View.VISIBLE);
+        tvDisabled.setVisibility(analysis ? View.GONE : View.VISIBLE);
 
         // Set enabled switch
-        swEnabled.setChecked(log);
+        swEnabled.setChecked(analysis);
         swEnabled.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
             public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                prefs.edit().putBoolean("log", isChecked).apply();
+                prefs.edit().putBoolean("analysis", isChecked).apply();
             }
         });
 
@@ -290,18 +290,18 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     @Override
     public void onSharedPreferenceChanged(SharedPreferences prefs, String name) {
         Log.i(TAG, "Preference " + name + "=" + prefs.getAll().get(name));
-        if ("log".equals(name)) {
+        if ("analysis".equals(name)) {
             // Get enabled
-            boolean log = prefs.getBoolean(name, false);
+            boolean analysis = prefs.getBoolean(name, false);
 
             // Display disabled warning
             TextView tvDisabled = (TextView) findViewById(R.id.tvDisabled);
-            tvDisabled.setVisibility(log ? View.GONE : View.VISIBLE);
+            tvDisabled.setVisibility(analysis ? View.GONE : View.VISIBLE);
 
             // Check switch state
             SwitchCompat swEnabled = (SwitchCompat) getSupportActionBar().getCustomView().findViewById(R.id.swEnabled);
-            if (swEnabled.isChecked() != log)
-                swEnabled.setChecked(log);
+            if (swEnabled.isChecked() != analysis)
+                swEnabled.setChecked(analysis);
 
             ServiceSinkhole.reload("changed " + name, ActivityAnalysis.this);
         }

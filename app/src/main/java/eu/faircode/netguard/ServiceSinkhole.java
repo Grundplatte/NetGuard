@@ -622,6 +622,7 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
             // Get settings
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ServiceSinkhole.this);
             boolean log = prefs.getBoolean("log", false);
+            boolean analysis = prefs.getBoolean("analysis", false);
             boolean log_app = prefs.getBoolean("log_app", false);
 
             DatabaseHelper dh = DatabaseHelper.getInstance(ServiceSinkhole.this);
@@ -630,9 +631,12 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
             String dname = dh.getQName(packet.daddr);
 
             // Traffic log
-            // TODO: add an analysis + log analysis results
             if (log)
                 dh.insertLog(packet, dname, connection, interactive);
+
+            //if (analysis)
+            // TODO: add an analysis + log analysis results
+
 
             // Application log
             if (log_app && packet.uid >= 0 && !(packet.uid == 0 && packet.protocol == 17 && packet.dport == 53)) {
@@ -1136,6 +1140,8 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
         boolean log_app = prefs.getBoolean("log_app", false);
         boolean filter = prefs.getBoolean("filter", false);
 
+        //TODO: maybe start native analysis too
+
         Log.i(TAG, "Start native log=" + log + "/" + log_app + " filter=" + filter);
 
         // Prepare rules
@@ -1543,7 +1549,9 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                 allowed = new Allowed();
         }
 
-        if (prefs.getBoolean("log", false) || prefs.getBoolean("log_app", false))
+        // TODO: maybe setup extra structure for analysis
+        if (prefs.getBoolean("log", false) || prefs.getBoolean("log_app", false) ||
+                prefs.getBoolean("analysis", false))
             logPacket(packet);
 
         return allowed;

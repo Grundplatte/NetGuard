@@ -208,6 +208,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         Log.i(TAG, DB_NAME + " upgrading from version " + oldVersion + " to " + newVersion);
 
+        //TODO: maybe insert extra stuff for analysis
+
         db.beginTransaction();
         try {
             if (oldVersion < 2) {
@@ -376,6 +378,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 cv.put("connection", connection);
                 cv.put("interactive", interactive ? 1 : 0);
 
+                // TODO: insert analysis failed?
+
                 if (db.insert("log", null, cv) == -1)
                     Log.e(TAG, "Insert log failed");
 
@@ -390,6 +394,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         notifyLogChanged();
     }
 
+    // TODO: clear analysis too, or extra function?
     public void clearLog() {
         mLock.writeLock().lock();
         try {
@@ -411,6 +416,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         notifyLogChanged();
     }
 
+    // TODO: anaylsis cleanup too, or extra function?
     public void cleanupLog(long time) {
         mLock.writeLock().lock();
         try {
