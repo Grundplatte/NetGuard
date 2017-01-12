@@ -950,6 +950,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
+    //TODO: add AnalysisChangedListener?
     public void addLogChangedListener(LogChangedListener listener) {
         logChangedListeners.add(listener);
     }

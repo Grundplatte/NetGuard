@@ -41,8 +41,8 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     private static final String TAG = "NetGuard.Analysis";
 
     private boolean running = false;
-    private ListView lvLog;
-    private AdapterLog adapter;
+    private ListView lvAnalysis;
+    private AdapterAnalysis adapter;
     private MenuItem menuSearch = null;
 
     private boolean live;
@@ -69,7 +69,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     protected void onCreate(Bundle savedInstanceState) {
         Util.setTheme(this);
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.logging);
+        setContentView(R.layout.analysislist);
         running = true;
 
         // Action bar
@@ -87,7 +87,6 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         resolve = prefs.getBoolean("resolve", false);
         organization = prefs.getBoolean("organization", false);
 
-        // TODO: change to correct perference analysis
         boolean analysis = prefs.getBoolean("analysis", false);
 
         // Show disabled message
@@ -105,7 +104,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         // Listen for preference changes
         prefs.registerOnSharedPreferenceChangeListener(this);
 
-        lvLog = (ListView) findViewById(R.id.lvLog);
+        lvAnalysis = (ListView) findViewById(R.id.lvLog);
 
         boolean udp = prefs.getBoolean("proto_udp", true);
         boolean tcp = prefs.getBoolean("proto_tcp", true);
@@ -113,14 +112,14 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         boolean allowed = prefs.getBoolean("traffic_allowed", true);
         boolean blocked = prefs.getBoolean("traffic_blocked", true);
 
-        adapter = new AdapterLog(this, DatabaseHelper.getInstance(this).getLog(udp, tcp, other, allowed, blocked), resolve, organization);
+        adapter = new AdapterAnalysis(this, DatabaseHelper.getInstance(this).getLog(udp, tcp, other, allowed, blocked), resolve, organization);
         adapter.setFilterQueryProvider(new FilterQueryProvider() {
             public Cursor runQuery(CharSequence constraint) {
                 return DatabaseHelper.getInstance(ActivityAnalysis.this).searchLog(constraint.toString());
             }
         });
 
-        lvLog.setAdapter(adapter);
+        lvAnalysis.setAdapter(adapter);
 
         try {
             vpn4 = InetAddress.getByName(prefs.getString("vpn4", "10.1.10.1"));
@@ -129,7 +128,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
             Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
         }
 
-        lvLog.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+        lvAnalysis.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
                 PackageManager pm = getPackageManager();
@@ -165,7 +164,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
 
                 // Build popup menu
                 PopupMenu popup = new PopupMenu(ActivityAnalysis.this, findViewById(R.id.vwPopupAnchor));
-                popup.inflate(R.menu.log);
+                popup.inflate(R.menu.analysispopup);
 
                 // Application name
                 if (uid >= 0)
@@ -310,7 +309,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.logging, menu);
+        inflater.inflate(R.menu.analysisoptions, menu);
 
         menuSearch = menu.findItem(R.id.menu_search);
         SearchView searchView = (SearchView) MenuItemCompat.getActionView(menuSearch);
