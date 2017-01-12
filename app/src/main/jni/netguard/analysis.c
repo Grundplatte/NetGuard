@@ -4,6 +4,8 @@
 
 #include "netguard.h"
 
+//TODO: use shit
+
 void analyse_tcp_header(struct tcp *hdr)
 {
 

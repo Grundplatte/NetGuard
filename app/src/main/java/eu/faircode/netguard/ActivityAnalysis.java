@@ -79,7 +79,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         getSupportActionBar().setDisplayShowCustomEnabled(true);
         getSupportActionBar().setCustomView(actionView);
 
-        getSupportActionBar().setTitle(R.string.menu_log);
+        getSupportActionBar().setTitle(R.string.menu_analysis);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         // Get settings
@@ -87,7 +87,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         resolve = prefs.getBoolean("resolve", false);
         organization = prefs.getBoolean("organization", false);
 
-        // TODO: change to correct perference
+        // TODO: change to correct perference analysis
         boolean log = prefs.getBoolean("log", false);
 
         // Show disabled message
