@@ -103,8 +103,6 @@ public class ActivityLog extends AppCompatActivity implements SharedPreferences.
 
         // Get settings
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        resolve = prefs.getBoolean("resolve", false);
-        organization = prefs.getBoolean("organization", false);
         boolean log = prefs.getBoolean("log", false);
 
         // Show disabled message

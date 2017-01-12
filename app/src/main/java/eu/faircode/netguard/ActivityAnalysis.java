@@ -46,12 +46,8 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     private MenuItem menuSearch = null;
 
     private boolean live;
-    private boolean resolve;
-    private boolean organization;
     private InetAddress vpn4 = null;
     private InetAddress vpn6 = null;
-
-    private static final int REQUEST_PCAP = 1;
 
     private DatabaseHelper.LogChangedListener listener = new DatabaseHelper.LogChangedListener() {
         @Override
@@ -84,9 +80,6 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
 
         // Get settings
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        resolve = prefs.getBoolean("resolve", false);
-        organization = prefs.getBoolean("organization", false);
-
         boolean analysis = prefs.getBoolean("analysis", false);
 
         // Show disabled message
@@ -112,7 +105,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         boolean allowed = prefs.getBoolean("traffic_allowed", true);
         boolean blocked = prefs.getBoolean("traffic_blocked", true);
 
-        adapter = new AdapterAnalysis(this, DatabaseHelper.getInstance(this).getLog(udp, tcp, other, allowed, blocked), resolve, organization);
+        adapter = new AdapterAnalysis(this, DatabaseHelper.getInstance(this).getLog(udp, tcp, other, allowed, blocked), true, true);
         adapter.setFilterQueryProvider(new FilterQueryProvider() {
             public Cursor runQuery(CharSequence constraint) {
                 return DatabaseHelper.getInstance(ActivityAnalysis.this).searchLog(constraint.toString());
@@ -344,11 +337,6 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     public boolean onPrepareOptionsMenu(Menu menu) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
 
-        // https://gist.github.com/granoeste/5574148
-        File pcap_file = new File(getCacheDir(), "netguard.pcap");
-
-        boolean export = (getPackageManager().resolveActivity(getIntentPCAPDocument(), 0) != null);
-
         menu.findItem(R.id.menu_protocol_udp).setChecked(prefs.getBoolean("proto_udp", true));
         menu.findItem(R.id.menu_protocol_tcp).setChecked(prefs.getBoolean("proto_tcp", true));
         menu.findItem(R.id.menu_protocol_other).setChecked(prefs.getBoolean("proto_other", true));
@@ -356,11 +344,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         menu.findItem(R.id.menu_traffic_allowed).setChecked(prefs.getBoolean("traffic_allowed", true));
         menu.findItem(R.id.menu_traffic_blocked).setChecked(prefs.getBoolean("traffic_blocked", true));
 
-        menu.findItem(R.id.menu_refresh).setEnabled(!menu.findItem(R.id.menu_log_live).isChecked());
-        menu.findItem(R.id.menu_log_resolve).setChecked(prefs.getBoolean("resolve", false));
-        menu.findItem(R.id.menu_log_organization).setChecked(prefs.getBoolean("organization", false));
-        menu.findItem(R.id.menu_pcap_enabled).setChecked(prefs.getBoolean("pcap", false));
-        menu.findItem(R.id.menu_pcap_export).setEnabled(pcap_file.exists() && export);
+        menu.findItem(R.id.menu_analysis_refresh).setEnabled(!menu.findItem(R.id.menu_anaysis_live).isChecked());
 
         return super.onPrepareOptionsMenu(menu);
     }
@@ -368,7 +352,6 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         final SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-        final File pcap_file = new File(getCacheDir(), "netguard.pcap");
 
         switch (item.getItemId()) {
             case android.R.id.home:
@@ -406,7 +389,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
                 updateAdapter();
                 return true;
 
-            case R.id.menu_log_live:
+            case R.id.menu_anaysis_live:
                 item.setChecked(!item.isChecked());
                 live = item.isChecked();
                 if (live) {
@@ -416,48 +399,21 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
                     DatabaseHelper.getInstance(this).removeLogChangedListener(listener);
                 return true;
 
-            case R.id.menu_refresh:
+            case R.id.menu_analysis_refresh:
                 updateAdapter();
                 return true;
 
-            case R.id.menu_log_resolve:
+            case R.id.menu_anaysis_alert:
                 item.setChecked(!item.isChecked());
-                prefs.edit().putBoolean("resolve", item.isChecked()).apply();
-                adapter.setResolve(item.isChecked());
-                adapter.notifyDataSetChanged();
+                prefs.edit().putBoolean("alert", item.isChecked()).apply();
+                // TODO: maybe add ServiceSinkhole code?
                 return true;
 
-            case R.id.menu_log_organization:
-                item.setChecked(!item.isChecked());
-                prefs.edit().putBoolean("organization", item.isChecked()).apply();
-                adapter.setOrganization(item.isChecked());
-                adapter.notifyDataSetChanged();
-                return true;
-
-            case R.id.menu_pcap_enabled:
-                item.setChecked(!item.isChecked());
-                prefs.edit().putBoolean("pcap", item.isChecked()).apply();
-                ServiceSinkhole.setPcap(item.isChecked(), ActivityAnalysis.this);
-                return true;
-
-            case R.id.menu_pcap_export:
-                startActivityForResult(getIntentPCAPDocument(), REQUEST_PCAP);
-                return true;
-
-            case R.id.menu_log_clear:
+            case R.id.menu_analysis_clear:
                 new AsyncTask<Object, Object, Object>() {
                     @Override
                     protected Object doInBackground(Object... objects) {
                         DatabaseHelper.getInstance(ActivityAnalysis.this).clearLog();
-                        if (prefs.getBoolean("pcap", false)) {
-                            ServiceSinkhole.setPcap(false, ActivityAnalysis.this);
-                            if (pcap_file.exists() && !pcap_file.delete())
-                                Log.w(TAG, "Delete PCAP failed");
-                            ServiceSinkhole.setPcap(true, ActivityAnalysis.this);
-                        } else {
-                            if (pcap_file.exists() && !pcap_file.delete())
-                                Log.w(TAG, "Delete PCAP failed");
-                        }
                         return null;
                     }
 
@@ -467,13 +423,6 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
                             updateAdapter();
                     }
                 }.execute();
-                return true;
-
-            case R.id.menu_log_support:
-                Intent intent = new Intent(Intent.ACTION_VIEW);
-                intent.setData(Uri.parse("https://github.com/M66B/NetGuard/blob/master/FAQ.md#FAQ27"));
-                if (getPackageManager().resolveActivity(intent, 0) != null)
-                    startActivity(intent);
                 return true;
 
             default:
@@ -519,76 +468,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     protected void onActivityResult(int requestCode, int resultCode, final Intent data) {
         Log.i(TAG, "onActivityResult request=" + requestCode + " result=" + requestCode + " ok=" + (resultCode == RESULT_OK));
 
-        if (requestCode == REQUEST_PCAP) {
-            if (resultCode == RESULT_OK && data != null)
-                handleExportPCAP(data);
-
-        } else {
-            Log.w(TAG, "Unknown activity result request=" + requestCode);
-            super.onActivityResult(requestCode, resultCode, data);
-        }
-    }
-
-    private void handleExportPCAP(final Intent data) {
-        new AsyncTask<Object, Object, Throwable>() {
-            @Override
-            protected Throwable doInBackground(Object... objects) {
-                OutputStream out = null;
-                FileInputStream in = null;
-                try {
-                    // Stop capture
-                    ServiceSinkhole.setPcap(false, ActivityAnalysis.this);
-
-                    Uri target = data.getData();
-                    if (data.hasExtra("org.openintents.extra.DIR_PATH"))
-                        target = Uri.parse(target + "/netguard.pcap");
-                    Log.i(TAG, "Export PCAP URI=" + target);
-                    out = getContentResolver().openOutputStream(target);
-
-                    File pcap = new File(getCacheDir(), "netguard.pcap");
-                    in = new FileInputStream(pcap);
-
-                    int len;
-                    long total = 0;
-                    byte[] buf = new byte[4096];
-                    while ((len = in.read(buf)) > 0) {
-                        out.write(buf, 0, len);
-                        total += len;
-                    }
-                    Log.i(TAG, "Copied bytes=" + total);
-
-                    return null;
-                } catch (Throwable ex) {
-                    Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
-                    return ex;
-                } finally {
-                    if (out != null)
-                        try {
-                            out.close();
-                        } catch (IOException ex) {
-                            Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
-                        }
-                    if (in != null)
-                        try {
-                            in.close();
-                        } catch (IOException ex) {
-                            Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
-                        }
-
-                    // Resume capture
-                    SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ActivityAnalysis.this);
-                    if (prefs.getBoolean("pcap", false))
-                        ServiceSinkhole.setPcap(true, ActivityAnalysis.this);
-                }
-            }
-
-            @Override
-            protected void onPostExecute(Throwable ex) {
-                if (ex == null)
-                    Toast.makeText(ActivityAnalysis.this, R.string.msg_completed, Toast.LENGTH_LONG).show();
-                else
-                    Toast.makeText(ActivityAnalysis.this, ex.toString(), Toast.LENGTH_LONG).show();
-            }
-        }.execute();
+        Log.w(TAG, "Unknown activity result request=" + requestCode);
+        super.onActivityResult(requestCode, resultCode, data);
     }
 }
