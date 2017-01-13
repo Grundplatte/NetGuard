@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -20,6 +21,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.CursorAdapter;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
@@ -32,6 +34,8 @@ import java.util.List;
 public class AdapterAnalysis extends CursorAdapter {
     private static String TAG = "NetGuard.Analysis";
 
+    private boolean isHTTPS;
+    private boolean isGood;
     private boolean resolve;
     private boolean organization;
     private int colID;
@@ -107,7 +111,7 @@ public class AdapterAnalysis extends CursorAdapter {
 
     @Override
     public View newView(Context context, Cursor cursor, ViewGroup parent) {
-        return LayoutInflater.from(context).inflate(R.layout.log, parent, false);
+        return LayoutInflater.from(context).inflate(R.layout.analysis, parent, false);
     }
 
     @Override
@@ -130,37 +134,55 @@ public class AdapterAnalysis extends CursorAdapter {
         int interactive = (cursor.isNull(colInteractive) ? -1 : cursor.getInt(colInteractive));
 
         // Get views
+        LinearLayout llAnalysis = (LinearLayout) view.findViewById(R.id.llAnalysis);
         TextView tvTime = (TextView) view.findViewById(R.id.tvTime);
-        TextView tvProtocol = (TextView) view.findViewById(R.id.tvProtocol);
-        TextView tvFlags = (TextView) view.findViewById(R.id.tvFlags);
-        TextView tvSAddr = (TextView) view.findViewById(R.id.tvSAddr);
-        TextView tvSPort = (TextView) view.findViewById(R.id.tvSPort);
         final TextView tvDaddr = (TextView) view.findViewById(R.id.tvDAddr);
         TextView tvDPort = (TextView) view.findViewById(R.id.tvDPort);
-        final TextView tvOrganization = (TextView) view.findViewById(R.id.tvOrganization);
         ImageView ivIcon = (ImageView) view.findViewById(R.id.ivIcon);
-        TextView tvUid = (TextView) view.findViewById(R.id.tvUid);
-        TextView tvData = (TextView) view.findViewById(R.id.tvData);
-        ImageView ivConnection = (ImageView) view.findViewById(R.id.ivConnection);
-        ImageView ivInteractive = (ImageView) view.findViewById(R.id.ivInteractive);
+        ImageView ivLock = (ImageView) view.findViewById(R.id.ivLock);
+        ImageView ivStatus = (ImageView) view.findViewById(R.id.ivStatus);
+        ImageView ivExpander = (ImageView) view.findViewById(R.id.ivExpander);
+
 
         // Show time
         tvTime.setText(new SimpleDateFormat("HH:mm:ss").format(time));
-
+        /*
         // Show connection type
         if (connection <= 0)
-            ivConnection.setImageResource(allowed > 0 ? R.drawable.host_allowed : R.drawable.host_blocked);
+            ivLock.setImageResource(allowed > 0 ? R.drawable.host_allowed : R.drawable.host_blocked);
         else {
             if (allowed > 0)
-                ivConnection.setImageResource(connection == 1 ? R.drawable.wifi_on : R.drawable.other_on);
+                ivLock.setImageResource(connection == 1 ? R.drawable.wifi_on : R.drawable.other_on);
             else
-                ivConnection.setImageResource(connection == 1 ? R.drawable.wifi_off : R.drawable.other_off);
+                ivLock.setImageResource(connection == 1 ? R.drawable.wifi_off : R.drawable.other_off);
         }
+        */
+        isGood = true;
+
+        // TODO: i am ugly
+        if(dport == 443)
+            isHTTPS = true;
+        else
+            isHTTPS = false;
+
+        if (isHTTPS)
+            ivLock.setImageResource(R.drawable.lock_https);
+        else
+            ivLock.setImageResource(R.drawable.lock_http);
+
+        if (isGood)
+            ivStatus.setImageResource(R.drawable.status_ok);
+        else
+            ivStatus.setImageResource(R.drawable.status_attention);
+
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            Drawable wrap = DrawableCompat.wrap(ivConnection.getDrawable());
-            DrawableCompat.setTint(wrap, allowed > 0 ? colorOn : colorOff);
+            Drawable wrap_lock = DrawableCompat.wrap(ivLock.getDrawable());
+            Drawable wrap_status = DrawableCompat.wrap(ivStatus.getDrawable());
+            DrawableCompat.setTint(wrap_lock, isHTTPS == true ? colorOn : colorOff);
+            DrawableCompat.setTint(wrap_status, isGood == true ? colorOn : colorOff);
         }
 
+        /*
         // Show if screen on
         if (interactive <= 0)
             ivInteractive.setImageDrawable(null);
@@ -178,15 +200,11 @@ public class AdapterAnalysis extends CursorAdapter {
         // SHow TCP flags
         tvFlags.setText(flags);
         tvFlags.setVisibility(TextUtils.isEmpty(flags) ? View.GONE : View.VISIBLE);
-
+*/
         // Show source and destination port
-        if (protocol == 6 || protocol == 17) {
-            tvSPort.setText(sport < 0 ? "" : getKnownPort(sport));
-            tvDPort.setText(dport < 0 ? "" : getKnownPort(dport));
-        } else {
-            tvSPort.setText(sport < 0 ? "" : Integer.toString(sport));
-            tvDPort.setText(dport < 0 ? "" : Integer.toString(dport));
-        }
+
+        tvDPort.setText(dport < 0 ? "" : Integer.toString(dport));
+
 
         // Application icon
         ApplicationInfo info = null;
@@ -206,19 +224,8 @@ public class AdapterAnalysis extends CursorAdapter {
             Picasso.with(context).load(uri).resize(iconSize, iconSize).into(ivIcon);
         }
 
-        // https://android.googlesource.com/platform/system/core/+/master/include/private/android_filesystem_config.h
-        uid = uid % 100000; // strip off user ID
-        if (uid == -1)
-            tvUid.setText("");
-        else if (uid == 0)
-            tvUid.setText(context.getString(R.string.title_root));
-        else if (uid == 9999)
-            tvUid.setText("-"); // nobody
-        else
-            tvUid.setText(Integer.toString(uid));
-
         // Show source address
-        tvSAddr.setText(getKnownAddress(saddr));
+        //tvSAddr.setText(getKnownAddress(saddr));
 
         // Show destination address
         if (resolve && !isKnownAddress(daddr))
@@ -233,7 +240,7 @@ public class AdapterAnalysis extends CursorAdapter {
                     @Override
                     protected String doInBackground(String... args) {
                         try {
-                            return InetAddress.getByName(args[0]).getHostName();
+                            return InetAddress.getByName(args[0]).getHostAddress();
                         } catch (UnknownHostException ignored) {
                             return args[0];
                         }
@@ -246,10 +253,10 @@ public class AdapterAnalysis extends CursorAdapter {
                     }
                 }.execute(daddr);
             } else
-                tvDaddr.setText(dname);
+                tvDaddr.setText(daddr);
         else
-            tvDaddr.setText(getKnownAddress(daddr));
-
+            tvDaddr.setText(daddr);
+/*
         // Show organization
         tvOrganization.setVisibility(View.GONE);
         if (organization) {
@@ -289,6 +296,7 @@ public class AdapterAnalysis extends CursorAdapter {
             tvData.setText(data);
             tvData.setVisibility(View.VISIBLE);
         }
+        */
     }
 
     public boolean isKnownAddress(String addr) {

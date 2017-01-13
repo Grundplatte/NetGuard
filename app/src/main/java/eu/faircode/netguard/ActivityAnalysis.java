@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -27,6 +28,8 @@ import android.widget.ListView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.squareup.picasso.Picasso;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -121,6 +124,8 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
             Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
         }
 
+
+        /*
         lvAnalysis.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
@@ -251,7 +256,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
                 popup.show();
             }
         });
-
+        */
         live = true;
     }
 
