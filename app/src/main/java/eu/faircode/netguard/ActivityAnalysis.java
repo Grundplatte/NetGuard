@@ -13,6 +13,8 @@ import android.preference.PreferenceManager;
 import android.support.v4.app.NavUtils;
 import android.support.v4.view.MenuItemCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.support.v7.widget.LinearLayoutManager;
+import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.SwitchCompat;
 import android.text.TextUtils;
@@ -24,6 +26,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.CompoundButton;
 import android.widget.FilterQueryProvider;
+import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.PopupMenu;
 import android.widget.TextView;
@@ -44,7 +47,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     private static final String TAG = "NetGuard.Analysis";
 
     private boolean running = false;
-    private ListView lvAnalysis;
+    private RecyclerView rvAnalysis;
     private AdapterAnalysis adapter;
     private MenuItem menuSearch = null;
 
@@ -100,22 +103,25 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         // Listen for preference changes
         prefs.registerOnSharedPreferenceChangeListener(this);
 
-        lvAnalysis = (ListView) findViewById(R.id.lvLog);
-
         boolean udp = prefs.getBoolean("proto_udp", true);
         boolean tcp = prefs.getBoolean("proto_tcp", true);
         boolean other = prefs.getBoolean("proto_other", true);
         boolean allowed = prefs.getBoolean("traffic_allowed", true);
         boolean blocked = prefs.getBoolean("traffic_blocked", true);
 
+        // List all incoming packets
+        rvAnalysis = (RecyclerView) findViewById(R.id.rvAnalysis);
+        rvAnalysis.setLayoutManager(new LinearLayoutManager(this));
         adapter = new AdapterAnalysis(this, DatabaseHelper.getInstance(this).getLog(udp, tcp, other, allowed, blocked), true, true);
+        // todo: implement
+        /*
         adapter.setFilterQueryProvider(new FilterQueryProvider() {
             public Cursor runQuery(CharSequence constraint) {
                 return DatabaseHelper.getInstance(ActivityAnalysis.this).searchLog(constraint.toString());
             }
         });
-
-        lvAnalysis.setAdapter(adapter);
+        */
+        rvAnalysis.setAdapter(adapter);
 
         try {
             vpn4 = InetAddress.getByName(prefs.getString("vpn4", "10.1.10.1"));
@@ -314,23 +320,23 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                if (adapter != null)
-                    adapter.getFilter().filter(query);
+                if (adapter != null);
+                   // adapter.getFilter().filter(query); //todo implement
                 return true;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
-                if (adapter != null)
-                    adapter.getFilter().filter(newText);
+                if (adapter != null);
+                   // adapter.getFilter().filter(newText); //todo implement
                 return true;
             }
         });
         searchView.setOnCloseListener(new SearchView.OnCloseListener() {
             @Override
             public boolean onClose() {
-                if (adapter != null)
-                    adapter.getFilter().filter(null);
+                if (adapter != null);
+                   // adapter.getFilter().filter(null); //todo implement
                 return true;
             }
         });
@@ -446,7 +452,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
             adapter.changeCursor(DatabaseHelper.getInstance(this).getLog(udp, tcp, other, allowed, blocked));
             if (menuSearch != null && menuSearch.isActionViewExpanded()) {
                 SearchView searchView = (SearchView) MenuItemCompat.getActionView(menuSearch);
-                adapter.getFilter().filter(searchView.getQuery().toString());
+                //adapter.getFilter().filter(searchView.getQuery().toString()); //todo implement
             }
         }
     }

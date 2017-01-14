@@ -5,21 +5,17 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.preference.PreferenceManager;
 import android.support.v4.graphics.drawable.DrawableCompat;
-import android.support.v4.view.ViewCompat;
-import android.text.TextUtils;
+import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.CursorAdapter;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -29,10 +25,18 @@ import com.squareup.picasso.Picasso;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.List;
 
-public class AdapterAnalysis extends CursorAdapter {
+/**
+ * Created by Rainer on 13.01.2017.
+ */
+
+public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.ViewHolder>{
     private static String TAG = "NetGuard.Analysis";
+
+    private Context context;
+    private RecyclerView rv;
 
     private boolean isHTTPS;
     private boolean isGood;
@@ -61,8 +65,84 @@ public class AdapterAnalysis extends CursorAdapter {
     private InetAddress vpn4 = null;
     private InetAddress vpn6 = null;
 
-    public AdapterAnalysis(Context context, Cursor cursor, boolean resolve, boolean organization) {
-        super(context, cursor, 0);
+    // todo: problem wehn loading new packets and app expanded!
+    private List<Boolean> listAll = new ArrayList<>();
+    private int oldCount;
+
+    public class ViewHolder extends RecyclerView.ViewHolder{
+        public View view;
+
+        public LinearLayout llAnalysis;
+        public LinearLayout llAnalysisExpanded;
+        public LinearLayout llHTTPS;
+
+        public TextView tvTime;
+        public TextView tvDaddr;
+        public TextView tvDPort;
+        public ImageView ivIcon;
+        public ImageView ivLock;
+        public ImageView ivStatus;
+        public ImageView ivExpander;
+
+        //details
+        public TextView tvAppName;
+        public TextView tvProtocol;
+        public TextView tvHTTP;
+        public TextView tvCipher;
+        public TextView tvHash;
+        public TextView tvKeyExchange;
+        public TextView tvIP;
+        public TextView tvIPname;
+        public TextView tvPort;
+        public TextView tvPayload;
+
+
+        public ViewHolder(View itemView) {
+            super(itemView);
+            view = itemView;
+
+            llAnalysis = (LinearLayout) view.findViewById(R.id.llAnalysis);
+            llAnalysisExpanded = (LinearLayout) view.findViewById(R.id.llAnalysisExpanded);
+            llHTTPS = (LinearLayout) view.findViewById(R.id.llHTTPS);
+
+            tvTime = (TextView) view.findViewById(R.id.tvTime);
+            tvDaddr = (TextView) view.findViewById(R.id.tvDAddr);
+            tvDPort = (TextView) view.findViewById(R.id.tvDPort);
+            ivIcon = (ImageView) view.findViewById(R.id.ivIcon);
+            ivLock = (ImageView) view.findViewById(R.id.ivLock);
+            ivStatus = (ImageView) view.findViewById(R.id.ivStatus);
+            ivExpander = (ImageView) view.findViewById(R.id.ivExpander);
+
+            tvAppName = (TextView) view.findViewById(R.id.tvName);
+            tvProtocol = (TextView) view.findViewById(R.id.tvProtocol);
+            tvHTTP = (TextView) view.findViewById(R.id.tvHTTP);
+            tvCipher = (TextView) view.findViewById(R.id.tvCipher);
+            tvHash = (TextView) view.findViewById(R.id.tvHash);
+            tvKeyExchange = (TextView) view.findViewById(R.id.tvKeyExchange);
+            tvIP = (TextView) view.findViewById(R.id.tvIP);
+            tvIPname = (TextView) view.findViewById(R.id.tvIPname);
+            tvPort = (TextView) view.findViewById(R.id.tvPort);
+            tvPayload = (TextView) view.findViewById(R.id.tvPayload);
+        }
+    }
+
+    @Override
+    public void changeCursor(Cursor cursor) {
+        super.changeCursor(cursor);
+        int newCount = cursor.getCount();
+
+        for (int i=oldCount; i < newCount; i++) {
+            listAll.add(i, false);
+        }
+
+        oldCount = newCount;
+    }
+
+    public AdapterAnalysis(Context context, Cursor cursor, boolean resolve, boolean organization){
+        super(context, cursor);
+
+        this.context = context;
+
         this.resolve = resolve;
         this.organization = organization;
         colID = cursor.getColumnIndex("ID");
@@ -89,6 +169,11 @@ public class AdapterAnalysis extends CursorAdapter {
 
         iconSize = Util.dips2pixels(24, context);
 
+        for(int i = 0; i < cursor.getCount(); i++)
+            listAll.add(i, false);
+
+        oldCount = cursor.getCount();
+
         try {
             List<InetAddress> lstDns = ServiceSinkhole.getDns(context);
             dns1 = (lstDns.size() > 0 ? lstDns.get(0) : null);
@@ -101,109 +186,96 @@ public class AdapterAnalysis extends CursorAdapter {
         }
     }
 
-    public void setResolve(boolean resolve) {
-        this.resolve = resolve;
-    }
-
-    public void setOrganization(boolean organization) {
-        this.organization = organization;
+    @Override
+    public ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+        View itemView = LayoutInflater.from(parent.getContext())
+                .inflate(R.layout.analysis, parent, false);
+        ViewHolder vh = new ViewHolder(itemView);
+        return vh;
     }
 
     @Override
-    public View newView(Context context, Cursor cursor, ViewGroup parent) {
-        return LayoutInflater.from(context).inflate(R.layout.analysis, parent, false);
+    public void onAttachedToRecyclerView(RecyclerView recyclerView) {
+        super.onAttachedToRecyclerView(recyclerView);
+        rv = recyclerView;
     }
 
     @Override
-    public void bindView(final View view, final Context context, final Cursor cursor) {
+    public void onDetachedFromRecyclerView(RecyclerView recyclerView) {
+        super.onDetachedFromRecyclerView(recyclerView);
+        rv = null;
+    }
+
+    @Override
+    public void onBindViewHolder(final ViewHolder viewHolder, final Cursor cursor) {
+
+        final long pos = cursor.getPosition();
+
+        viewHolder.llAnalysis.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                // TODO: implement
+                int pos_int = (int)pos;
+                if (listAll.get(pos_int))
+                    listAll.set(pos_int, false);
+                else
+                    listAll.set(pos_int, true);
+
+                Log.d(TAG, "onClick: " + listAll.get(pos_int) + " nr " + pos);
+                //view.setBackgroundColor(colorOff);
+                notifyItemChanged(pos_int);
+            }
+        });
+
+        // Show expand/collapse indicator
+        viewHolder.ivExpander.setImageLevel((listAll.get((int)pos) == true) ? 1 : 0);
+
         // Get values
-        final long id = cursor.getLong(colID);
         long time = cursor.getLong(colTime);
-        int version = (cursor.isNull(colVersion) ? -1 : cursor.getInt(colVersion));
-        int protocol = (cursor.isNull(colProtocol) ? -1 : cursor.getInt(colProtocol));
+        String daddr = cursor.getString(colDAddr);
+        int dport = (cursor.isNull(colDPort) ? -1 : cursor.getInt(colDPort));
+        int uid = (cursor.isNull(colUid) ? -1 : cursor.getInt(colUid));
+        /*
+        final long id = cursor.getLong(colID);
         String flags = cursor.getString(colFlags);
         String saddr = cursor.getString(colSAddr);
         int sport = (cursor.isNull(colSPort) ? -1 : cursor.getInt(colSPort));
-        String daddr = cursor.getString(colDAddr);
-        int dport = (cursor.isNull(colDPort) ? -1 : cursor.getInt(colDPort));
-        String dname = (cursor.isNull(colDName) ? null : cursor.getString(colDName));
-        int uid = (cursor.isNull(colUid) ? -1 : cursor.getInt(colUid));
-        String data = cursor.getString(colData);
         int allowed = (cursor.isNull(colAllowed) ? -1 : cursor.getInt(colAllowed));
         int connection = (cursor.isNull(colConnection) ? -1 : cursor.getInt(colConnection));
         int interactive = (cursor.isNull(colInteractive) ? -1 : cursor.getInt(colInteractive));
-
-        // Get views
-        LinearLayout llAnalysis = (LinearLayout) view.findViewById(R.id.llAnalysis);
-        TextView tvTime = (TextView) view.findViewById(R.id.tvTime);
-        final TextView tvDaddr = (TextView) view.findViewById(R.id.tvDAddr);
-        TextView tvDPort = (TextView) view.findViewById(R.id.tvDPort);
-        ImageView ivIcon = (ImageView) view.findViewById(R.id.ivIcon);
-        ImageView ivLock = (ImageView) view.findViewById(R.id.ivLock);
-        ImageView ivStatus = (ImageView) view.findViewById(R.id.ivStatus);
-        ImageView ivExpander = (ImageView) view.findViewById(R.id.ivExpander);
-
+        */
 
         // Show time
-        tvTime.setText(new SimpleDateFormat("HH:mm:ss").format(time));
-        /*
-        // Show connection type
-        if (connection <= 0)
-            ivLock.setImageResource(allowed > 0 ? R.drawable.host_allowed : R.drawable.host_blocked);
-        else {
-            if (allowed > 0)
-                ivLock.setImageResource(connection == 1 ? R.drawable.wifi_on : R.drawable.other_on);
-            else
-                ivLock.setImageResource(connection == 1 ? R.drawable.wifi_off : R.drawable.other_off);
-        }
-        */
-        isGood = true;
+        viewHolder.tvTime.setText(new SimpleDateFormat("HH:mm:ss").format(time));
+
 
         // TODO: i am ugly
+        isGood = true;
         if(dport == 443)
             isHTTPS = true;
         else
             isHTTPS = false;
 
         if (isHTTPS)
-            ivLock.setImageResource(R.drawable.lock_https);
+            viewHolder.ivLock.setImageResource(R.drawable.lock_https);
         else
-            ivLock.setImageResource(R.drawable.lock_http);
+            viewHolder.ivLock.setImageResource(R.drawable.lock_http);
 
         if (isGood)
-            ivStatus.setImageResource(R.drawable.status_ok);
+            viewHolder.ivStatus.setImageResource(R.drawable.status_ok);
         else
-            ivStatus.setImageResource(R.drawable.status_attention);
+            viewHolder.ivStatus.setImageResource(R.drawable.status_attention);
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            Drawable wrap_lock = DrawableCompat.wrap(ivLock.getDrawable());
-            Drawable wrap_status = DrawableCompat.wrap(ivStatus.getDrawable());
+            Drawable wrap_lock = DrawableCompat.wrap(viewHolder.ivLock.getDrawable());
+            Drawable wrap_status = DrawableCompat.wrap(viewHolder.ivStatus.getDrawable());
             DrawableCompat.setTint(wrap_lock, isHTTPS == true ? colorOn : colorOff);
             DrawableCompat.setTint(wrap_status, isGood == true ? colorOn : colorOff);
         }
 
-        /*
-        // Show if screen on
-        if (interactive <= 0)
-            ivInteractive.setImageDrawable(null);
-        else {
-            ivInteractive.setImageResource(R.drawable.screen_on);
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-                Drawable wrap = DrawableCompat.wrap(ivInteractive.getDrawable());
-                DrawableCompat.setTint(wrap, colorOn);
-            }
-        }
 
-        // Show protocol name
-        tvProtocol.setText(Util.getProtocolName(protocol, version, false));
-
-        // SHow TCP flags
-        tvFlags.setText(flags);
-        tvFlags.setVisibility(TextUtils.isEmpty(flags) ? View.GONE : View.VISIBLE);
-*/
         // Show source and destination port
-
-        tvDPort.setText(dport < 0 ? "" : Integer.toString(dport));
+        viewHolder.tvDPort.setText(dport < 0 ? "" : Integer.toString(dport));
 
 
         // Application icon
@@ -215,26 +287,29 @@ public class AdapterAnalysis extends CursorAdapter {
                 info = pm.getApplicationInfo(pkg[0], 0);
             } catch (PackageManager.NameNotFoundException ignored) {
             }
-        if (info == null)
-            ivIcon.setImageDrawable(null);
+        if (info == null) {
+            viewHolder.ivIcon.setImageDrawable(null);
+            viewHolder.tvAppName.setText("Application:");
+        }
         else if (info.icon == 0)
-            Picasso.with(context).load(android.R.drawable.sym_def_app_icon).into(ivIcon);
+            Picasso.with(context).load(android.R.drawable.sym_def_app_icon).into(viewHolder.ivIcon);
         else {
             Uri uri = Uri.parse("android.resource://" + info.packageName + "/" + info.icon);
-            Picasso.with(context).load(uri).resize(iconSize, iconSize).into(ivIcon);
+            Picasso.with(context).load(uri).resize(iconSize, iconSize).into(viewHolder.ivIcon);
+            viewHolder.tvAppName.setText("Application:" + info.loadLabel(pm).toString());
         }
 
-        // Show source address
-        //tvSAddr.setText(getKnownAddress(saddr));
 
         // Show destination address
+        viewHolder.tvDaddr.setText(daddr);
+        /*
         if (resolve && !isKnownAddress(daddr))
             if (dname == null) {
-                tvDaddr.setText(daddr);
+                viewHolder.tvDaddr.setText(daddr);
                 new AsyncTask<String, Object, String>() {
                     @Override
                     protected void onPreExecute() {
-                        ViewCompat.setHasTransientState(tvDaddr, true);
+                        ViewCompat.setHasTransientState(viewHolder.tvDaddr, true);
                     }
 
                     @Override
@@ -253,50 +328,54 @@ public class AdapterAnalysis extends CursorAdapter {
                     }
                 }.execute(daddr);
             } else
-                tvDaddr.setText(daddr);
+                viewHolder.tvDaddr.setText(daddr);
         else
-            tvDaddr.setText(daddr);
-/*
-        // Show organization
-        tvOrganization.setVisibility(View.GONE);
-        if (organization) {
-            if (!isKnownAddress(daddr))
-                new AsyncTask<String, Object, String>() {
-                    @Override
-                    protected void onPreExecute() {
-                        ViewCompat.setHasTransientState(tvOrganization, true);
-                    }
+            viewHolder.tvDaddr.setText(daddr);
+            */
 
-                    @Override
-                    protected String doInBackground(String... args) {
-                        try {
-                            return Util.getOrganization(args[0]);
-                        } catch (Throwable ex) {
-                            Log.w(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
-                            return null;
-                        }
-                    }
+        if(listAll.get((int)pos)) {
+            cursor.moveToPosition((int)pos);
 
-                    @Override
-                    protected void onPostExecute(String organization) {
-                        if (organization != null) {
-                            tvOrganization.setText(organization);
-                            tvOrganization.setVisibility(View.VISIBLE);
-                        }
-                        ViewCompat.setHasTransientState(tvOrganization, false);
-                    }
-                }.execute(daddr);
+            String dname = (cursor.isNull(colDName) ? null : cursor.getString(colDName));
+            String payload = (cursor.isNull(colData) ? "" : cursor.getString(colData));
+            int version = (cursor.isNull(colVersion) ? -1 : cursor.getInt(colVersion));
+            int protocol = (cursor.isNull(colProtocol) ? -1 : cursor.getInt(colProtocol));
+
+            String protocol_name = Util.getProtocolName(protocol, version, false);
+            String HTTP_name = isHTTPS ? "HTTPS" : "HTTP";
+            viewHolder.llAnalysisExpanded.setVisibility(View.VISIBLE);
+
+            viewHolder.tvProtocol.setText("Transfer Protocol: " + protocol_name);
+            viewHolder.tvHTTP.setText("Application Protocol: " + HTTP_name);
+
+            if(isHTTPS) {
+                viewHolder.llHTTPS.setVisibility(View.VISIBLE);
+                viewHolder.tvCipher.setText("Cipher: ");
+                viewHolder.tvHash.setText("Hash: ");
+                viewHolder.tvKeyExchange.setText("Key Exchange:");
+            }
+            else
+                viewHolder.llHTTPS.setVisibility(View.GONE);
+
+            viewHolder.tvIP.setText("Destination Address: " + daddr);
+            viewHolder.tvIPname.setText("(" + dname + ")");
+            viewHolder.tvPort.setText("Destination Port: " + dport);
+
+            viewHolder.tvPayload.setText(payload);
+        }
+        else {
+            viewHolder.llAnalysisExpanded.setVisibility(View.GONE);
         }
 
-        // Show extra data
-        if (TextUtils.isEmpty(data)) {
-            tvData.setText("");
-            tvData.setVisibility(View.GONE);
-        } else {
-            tvData.setText(data);
-            tvData.setVisibility(View.VISIBLE);
-        }
-        */
+    }
+
+
+    public void setResolve(boolean resolve) {
+        this.resolve = resolve;
+    }
+
+    public void setOrganization(boolean organization) {
+        this.organization = organization;
     }
 
     public boolean isKnownAddress(String addr) {
