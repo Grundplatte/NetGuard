@@ -694,6 +694,12 @@ jfieldID fidData = NULL;
 jfieldID fidUid = NULL;
 jfieldID fidAllowed = NULL;
 
+// ssl stuff
+jfieldID fidSSLVersion = NULL;
+jfieldID fidCType = NULL;
+jfieldID fidHType = NULL;
+jfieldID fidCipher = NULL;
+
 jobject create_packet(const struct arguments *args,
                       jint version,
                       jint protocol,
@@ -705,6 +711,24 @@ jobject create_packet(const struct arguments *args,
                       const char *data,
                       jint uid,
                       jboolean allowed) {
+    return create_packet_ssl(args, version, protocol, flags, source, sport, dest, dport, data, uid, allowed, 0, 0, 0, 0);
+}
+
+jobject create_packet_ssl(const struct arguments *args,
+                      jint version,
+                      jint protocol,
+                      const char *flags,
+                      const char *source,
+                      jint sport,
+                      const char *dest,
+                      jint dport,
+                      const char *data,
+                      jint uid,
+                      jboolean allowed,
+                      jint sslversion,
+                      jint ctype,
+                      jint htype,
+                      jint cipher) {
     JNIEnv *env = args->env;
 
 #ifdef PROFILE_JNI
@@ -737,6 +761,12 @@ jobject create_packet(const struct arguments *args,
         fidData = jniGetFieldID(env, clsPacket, "data", string);
         fidUid = jniGetFieldID(env, clsPacket, "uid", "I");
         fidAllowed = jniGetFieldID(env, clsPacket, "allowed", "Z");
+
+        // ssl stuff
+        fidSSLVersion = jniGetFieldID(env, clsPacket, "sslversion", "I");
+        fidCType = jniGetFieldID(env, clsPacket, "ctype", "I");
+        fidHType = jniGetFieldID(env, clsPacket, "htype", "I");
+        fidCipher = jniGetFieldID(env, clsPacket, "cipher", "I");
     }
 
     struct timeval tv;
@@ -758,6 +788,11 @@ jobject create_packet(const struct arguments *args,
     (*env)->SetObjectField(env, jpacket, fidData, jdata);
     (*env)->SetIntField(env, jpacket, fidUid, uid);
     (*env)->SetBooleanField(env, jpacket, fidAllowed, allowed);
+    // ssl stuff
+    (*env)->SetIntField(env, jpacket, fidSSLVersion, sslversion);
+    (*env)->SetIntField(env, jpacket, fidCType, ctype);
+    (*env)->SetIntField(env, jpacket, fidHType, htype);
+    (*env)->SetIntField(env, jpacket, fidCipher, cipher);
 
     (*env)->DeleteLocalRef(env, jdata);
     (*env)->DeleteLocalRef(env, jdest);

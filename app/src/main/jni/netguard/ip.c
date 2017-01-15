@@ -18,6 +18,7 @@
 */
 
 #include "netguard.h"
+#include "base64.h"
 
 int max_tun_msg = 0;
 extern int loglevel;
@@ -127,11 +128,20 @@ void handle_ip(const struct arguments *args,
     uint8_t protocol;
     void *saddr;
     void *daddr;
+    long total_length;
     char source[INET6_ADDRSTRLEN + 1];
     char dest[INET6_ADDRSTRLEN + 1];
     char flags[10];
     int flen = 0;
     uint8_t *payload;
+    char * payload_str;
+    payload_str = 0;
+
+    // ssl stuff
+    int sslversion = 0;
+    int sslctype = 0;
+    int sslhtype = 0;
+    int sslcipher = 0;
 
     // Get protocol, addresses & payload
     uint8_t version = (*pkt) >> 4;
@@ -146,6 +156,8 @@ void handle_ip(const struct arguments *args,
         protocol = ip4hdr->protocol;
         saddr = &ip4hdr->saddr;
         daddr = &ip4hdr->daddr;
+        total_length = ntohs(ip4hdr->tot_len);
+
 
         if (ip4hdr->frag_off & IP_MF) {
             log_android(ANDROID_LOG_ERROR, "IP fragment offset %u",
@@ -155,9 +167,6 @@ void handle_ip(const struct arguments *args,
 
         uint8_t ipoptlen = (uint8_t) ((ip4hdr->ihl - 5) * 4);
         payload = (uint8_t *) (pkt + sizeof(struct iphdr) + ipoptlen);
-
-        // TODO: correct?
-        analyse_ip4_header(ip4hdr);
 
         if (ntohs(ip4hdr->tot_len) != length) {
             log_android(ANDROID_LOG_ERROR, "Invalid length %u header length %u",
@@ -204,12 +213,10 @@ void handle_ip(const struct arguments *args,
         saddr = &ip6hdr->ip6_src;
         daddr = &ip6hdr->ip6_dst;
 
+        // TODO: implement
+        total_length = 0;
+
         payload = (uint8_t *) (pkt + sizeof(struct ip6_hdr) + off);
-
-        // TODO checksum
-
-        // TODO: correct?
-        analyse_ip6_header(ip6hdr);
     }
     else {
         log_android(ANDROID_LOG_ERROR, "Unknown version %d", version);
@@ -271,8 +278,6 @@ void handle_ip(const struct arguments *args,
             flags[flen++] = 'F';
         if (tcp->rst)
             flags[flen++] = 'R';
-
-        // TODO checksum
     }
     else if (protocol != IPPROTO_HOPOPTS && protocol != IPPROTO_IGMP && protocol != IPPROTO_ESP)
         report_error(args, 1, "Unknown protocol %d", protocol);
@@ -302,6 +307,85 @@ void handle_ip(const struct arguments *args,
                 "Packet v%d %s/%u > %s/%u proto %d flags %s uid %d",
                 version, source, sport, dest, dport, protocol, flags, uid);
 
+    // TODO: implement tls parsing
+    if( protocol == IPPROTO_TCP && dport == 443) {
+        // handle payload
+        const uint16_t tcplen = (const uint16_t) (length - (payload - pkt));
+        size_t out_len;
+        payload_str = base64_encode(payload, tcplen, &out_len);
+
+        // check if its a TLS packet
+        const struct tcphdr *tcphdr = (struct tcphdr *) payload;
+        const uint8_t tcpoptlen = (uint8_t) ((tcphdr->doff - 5) * 4);
+
+        const uint8_t *data = payload + sizeof(struct tcphdr) + tcpoptlen;
+        struct sslhdr *sslhdr = (struct sslhdr *) data;
+
+        const uint16_t datalen = (const uint16_t) (length - (payload - pkt));
+
+        if(datalen > 0 && is_valid_ssl_hdr(sslhdr)) {
+            // TODO:
+            sslversion = ntohs(sslhdr->version);
+            sslctype = sslhdr->type;
+
+            switch(sslhdr->type) {
+                case CTYPE_HANDSHAKE:
+                    log_android(ANDROID_LOG_DEBUG, "TLS Handshake");
+
+                    const uint8_t *hdata = data + sizeof(struct sslhdr);
+                    struct sslhnd *handshake = (struct sslhnd *) (hdata);
+
+                    sslhtype = handshake->type;
+
+                    switch(handshake->type) {
+                        case HTYPE_CLT_HELLO:
+                            log_android(ANDROID_LOG_DEBUG, "Client Hello");
+                            sslversion = ntohs((u_int16_t)*(hdata + sizeof(struct sslhnd)));
+                            break;
+
+                        case HTYPE_SRV_HELLO:
+                            log_android(ANDROID_LOG_DEBUG, "Server Hello");
+                            sslversion = ntohs((u_int16_t)*(hdata + sizeof(struct sslhnd)));
+                            sslcipher = getCipherSuite(hdata);
+                            break;
+
+                        case HTYPE_SRV_HELLO_DONE:
+                            log_android(ANDROID_LOG_DEBUG, "Server Done");
+                            break;
+
+                        case HTYPE_CERT:
+                            log_android(ANDROID_LOG_DEBUG, "Cert");
+                            break;
+
+                        case HTYPE_SRV_KEY_EX:
+                            log_android(ANDROID_LOG_DEBUG, "Server Key Exchange");
+                            break;
+
+                        case HTYPE_CLT_KEY_EX:
+                            log_android(ANDROID_LOG_DEBUG, "Client Kex Exchange");
+                            break;
+
+                        default:
+                            log_android(ANDROID_LOG_DEBUG, "2 ERROR!");
+                    }
+                    break;
+
+                case CTYPE_CHANGE_CIPHER_SPEC:
+                    log_android(ANDROID_LOG_DEBUG, "CHANGE CIPHER SPEC");
+                    break;
+
+                case CTYPE_APPLICATION_DATA:
+                    log_android(ANDROID_LOG_DEBUG, "App Data");
+                    break;
+
+                case CTYPE_ALERT:
+                    log_android(ANDROID_LOG_DEBUG, "Alert");
+                    break;
+            }
+        }
+
+    }
+
     // Check if allowed
     int allowed = 0;
     struct allowed *redirect = NULL;
@@ -310,12 +394,20 @@ void handle_ip(const struct arguments *args,
     else if (protocol == IPPROTO_TCP && !syn)
         allowed = 1; // assume existing session
     else {
-        jobject objPacket = create_packet(
-                args, version, protocol, flags, source, sport, dest, dport, "", uid, 0);
+        // FIXME: is the data correct?
+        jobject objPacket = create_packet_ssl(
+                args, version, protocol, flags, source, sport, dest, dport,
+                payload_str!=0?payload_str:"", uid, 0, sslversion, sslctype, sslhtype, sslcipher);
         redirect = is_address_allowed(args, objPacket);
         allowed = (redirect != NULL);
         if (redirect != NULL && (*redirect->raddr == 0 || redirect->rport == 0))
             redirect = NULL;
+    }
+
+    // free data
+    if(payload_str != 0) {
+        free(payload_str);
+        payload_str = 0;
     }
 
     // Handle allowed traffic

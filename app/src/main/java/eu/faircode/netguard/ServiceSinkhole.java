@@ -631,7 +631,8 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
             String dname = dh.getQName(packet.daddr);
 
             // Traffic log
-            if (log)
+            // FIXME: remove analysis
+            if (log || analysis)
                 dh.insertLog(packet, dname, connection, interactive);
 
             //if (analysis)
@@ -1137,6 +1138,7 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
     private void startNative(ParcelFileDescriptor vpn, List<Rule> listAllowed, List<Rule> listRule) {
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ServiceSinkhole.this);
         boolean log = prefs.getBoolean("log", false);
+        boolean analysis = prefs.getBoolean("analysis", false);
         boolean log_app = prefs.getBoolean("log_app", false);
         boolean filter = prefs.getBoolean("filter", false);
 
@@ -1163,7 +1165,8 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
         else
             mapNoNotify.clear();
 
-        if (log || log_app || filter) {
+        // FIXME: remove analysis
+        if (analysis || log || log_app || filter) {
             int prio = Integer.parseInt(prefs.getString("loglevel", Integer.toString(Log.WARN)));
             if (prefs.getBoolean("socks5_enabled", false))
                 jni_socks5(

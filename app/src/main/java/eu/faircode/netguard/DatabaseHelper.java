@@ -41,7 +41,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String TAG = "NetGuard.Database";
 
     private static final String DB_NAME = "Netguard";
-    private static final int DB_VERSION = 20;
+    private static final int DB_VERSION = 22;
 
     private static boolean once = true;
     private static List<LogChangedListener> logChangedListeners = new ArrayList<>();
@@ -134,6 +134,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 ", allowed INTEGER NULL" +
                 ", connection INTEGER NULL" +
                 ", interactive INTEGER NULL" +
+                ", sslversion INTEGER NULL" +
+                ", sslctype INTEGER NULL" +
+                ", sslhtype INTEGER NULL" +
+                ", sslcipher INTEGER NULL" +
                 ");");
         db.execSQL("CREATE INDEX idx_log_time ON log(time)");
         db.execSQL("CREATE INDEX idx_log_dest ON log(daddr)");
@@ -315,6 +319,17 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 db.execSQL("CREATE INDEX IF NOT EXISTS idx_access_daddr ON access(daddr)");
                 oldVersion = 20;
             }
+            if (oldVersion < 22) {
+                if (!columnExists(db, "log", "sslversion"))
+                    db.execSQL("ALTER TABLE log ADD COLUMN sslversion INTEGER NULL");
+                if (!columnExists(db, "log", "sslctype"))
+                    db.execSQL("ALTER TABLE log ADD COLUMN sslctype INTEGER NULL");
+                if (!columnExists(db, "log", "sslhtype"))
+                    db.execSQL("ALTER TABLE log ADD COLUMN sslhtype INTEGER NULL");
+                if (!columnExists(db, "log", "sslcipher"))
+                    db.execSQL("ALTER TABLE log ADD COLUMN sslcipher INTEGER NULL");
+                oldVersion = 22;
+            }
 
             if (oldVersion == DB_VERSION) {
                 db.setVersion(oldVersion);
@@ -378,7 +393,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 cv.put("connection", connection);
                 cv.put("interactive", interactive ? 1 : 0);
 
-                // TODO: insert analysis failed?
+                // TODO: ssl stuff
+                cv.put("sslversion", packet.sslversion);
+                cv.put("sslctype", packet.ctype);
+                cv.put("sslhtype", packet.htype);
+                cv.put("sslcipher", packet.cipher);
 
                 if (db.insert("log", null, cv) == -1)
                     Log.e(TAG, "Insert log failed");

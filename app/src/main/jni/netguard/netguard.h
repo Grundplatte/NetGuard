@@ -26,6 +26,8 @@
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
 
+#include "ssl.h"
+
 #include <android/log.h>
 #include <sys/system_properties.h>
 
@@ -495,6 +497,22 @@ jobject create_packet(const struct arguments *args,
                       const char *data,
                       jint uid,
                       jboolean allowed);
+
+jobject create_packet_ssl(const struct arguments *args,
+                      jint version,
+                      jint protocol,
+                      const char *flags,
+                      const char *source,
+                      jint sport,
+                      const char *dest,
+                      jint dport,
+                      const char *data,
+                      jint uid,
+                      jboolean allowed,
+                      jint sslversion,
+                      jint ctype,
+                      jint htype,
+                      jint cipher);
 
 void account_usage(const struct arguments *args, jint version, jint protocol,
                    const char *daddr, jint dport, jint uid, jlong sent, jlong received);
