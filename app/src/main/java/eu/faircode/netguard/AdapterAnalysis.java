@@ -44,18 +44,20 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
 
     private boolean isHTTPS;
     private boolean isGood;
-    private int colID;
+
     private int colTime;
     private int colVersion;
     private int colProtocol;
-    private int colFlags;
-    private int colSAddr;
-    private int colSPort;
     private int colDAddr;
     private int colDPort;
     private int colDName;
+
+    private int colTLSversion;
+    private int colStr;
+    private int colCipher;
+
     private int colUid;
-    private int colData;
+    //private int colData;
     private int colorOn;
     private int colorOff;
     private int iconSize;
@@ -150,18 +152,18 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         super(context, cursor);
 
         this.context = context;
-        colID = cursor.getColumnIndex("ID");
-        colTime = cursor.getColumnIndex("time");
+
+        //colTime = cursor.getColumnIndex("time");
         colVersion = cursor.getColumnIndex("version");
         colProtocol = cursor.getColumnIndex("protocol");
-        colFlags = cursor.getColumnIndex("flags");
-        colSAddr = cursor.getColumnIndex("saddr");
-        colSPort = cursor.getColumnIndex("sport");
         colDAddr = cursor.getColumnIndex("daddr");
         colDPort = cursor.getColumnIndex("dport");
         colDName = cursor.getColumnIndex("dname");
         colUid = cursor.getColumnIndex("uid");
-        colData = cursor.getColumnIndex("data");
+        //colData = cursor.getColumnIndex("data");
+        colTLSversion = cursor.getColumnIndex("TLSversion");
+        colCipher = cursor.getColumnIndex("cipher");
+        colStr = cursor.getColumnIndex("str");
 
         TypedValue tv = new TypedValue();
         context.getTheme().resolveAttribute(R.attr.colorOn, tv, true);
@@ -240,7 +242,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         viewHolder.ivExpander.setImageLevel((listExpanded.get((int)pos) == true) ? 1 : 0);
 
         // Get values
-        long time = cursor.getLong(colTime);
+        //long time = cursor.getLong(colTime);
         String daddr = cursor.getString(colDAddr);
         String dname = (cursor.isNull(colDName) ? null : cursor.getString(colDName));
         int dport = (cursor.isNull(colDPort) ? -1 : cursor.getInt(colDPort));
@@ -248,7 +250,8 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
 
 
         // Show time
-        viewHolder.tvTime.setText(new SimpleDateFormat("HH:mm:ss").format(time));
+        //viewHolder.tvTime.setText(new SimpleDateFormat("HH:mm:ss").format(time));
+        viewHolder.tvTime.setText("ufo time");
 
 
         // TODO: i am ugly
@@ -316,9 +319,13 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         if(listExpanded.get((int)pos)) {
             cursor.moveToPosition((int)pos);
 
-            String payload = (cursor.isNull(colData) ? "" : cursor.getString(colData));
+            //String payload = (cursor.isNull(colData) ? "" : cursor.getString(colData));
             int version = (cursor.isNull(colVersion) ? -1 : cursor.getInt(colVersion));
             int protocol = (cursor.isNull(colProtocol) ? -1 : cursor.getInt(colProtocol));
+            int SSLversion = (cursor.isNull(colTLSversion) ? -1 : cursor.getInt(colTLSversion));
+            int cipher = (cursor.isNull(colCipher) ? -1 : cursor.getInt(colCipher));
+            int str = (cursor.isNull(colStr) ? -1 : cursor.getInt(colStr));
+
 
             String protocol_name = Util.getProtocolName(protocol, version, false);
             String HTTP_name = isHTTPS ? "HTTPS" : "HTTP";
@@ -329,9 +336,9 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
 
             if(isHTTPS) {
                 viewHolder.llHTTPS.setVisibility(View.VISIBLE);
-                viewHolder.tvTLS.setText("    Version: ");
-                viewHolder.tvCipher.setText("    Cipher: ");
-                viewHolder.tvHash.setText("    Hash: ");
+                viewHolder.tvTLS.setText("    Version: " + SSLversion);
+                viewHolder.tvCipher.setText("    Cipher: " + cipher);
+                viewHolder.tvHash.setText("    Hash: " + str);
                 viewHolder.tvKeyExchange.setText("    Key Exchange:");
             }
             else
@@ -342,7 +349,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
             viewHolder.tvPort.setText("    Destination Port: " + dport);
             viewHolder.tvPacketType.setText("    Type: " + getKnownPort(dport));
 
-            viewHolder.tvPayload.setText(payload);
+            viewHolder.tvPayload.setText("FAG");
 
             // Show organization
                 if (!isKnownAddress(daddr))
@@ -427,13 +434,13 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
                     boolean udp = prefs.getBoolean("proto_udp", true);
                     boolean tcp = prefs.getBoolean("proto_tcp", true);
                     boolean other = prefs.getBoolean("proto_other", true);
-                    cursor = DatabaseHelper.getInstance(context).getLog(udp, tcp, other, true, true);
+                    cursor = DatabaseHelper.getInstance(context).getSessions(udp, tcp, other);
                 }
                 else {
                     // set the new cursor
                     //query = query.toString().toLowerCase().trim();
                     //todo: add udp, tcp, other to searchlog
-                    cursor = DatabaseHelper.getInstance(context).searchLog(query.toString());
+                    cursor = DatabaseHelper.getInstance(context).searchSessions(query.toString());
                 }
 
                 FilterResults results = new FilterResults();

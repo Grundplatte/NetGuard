@@ -41,10 +41,11 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String TAG = "NetGuard.Database";
 
     private static final String DB_NAME = "Netguard";
-    private static final int DB_VERSION = 22;
+    private static final int DB_VERSION = 23;
 
     private static boolean once = true;
     private static List<LogChangedListener> logChangedListeners = new ArrayList<>();
+    private static List<SessionChangedListener> sessionChangedListeners = new ArrayList<>();
     private static List<AccessChangedListener> accessChangedListeners = new ArrayList<>();
     private static List<ForwardChangedListener> forwardChangedListeners = new ArrayList<>();
 
@@ -54,6 +55,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private final static int MSG_LOG = 1;
     private final static int MSG_ACCESS = 2;
     private final static int MSG_FORWARD = 3;
+    private final static int MSG_SESSION = 4;
 
     private ReentrantReadWriteLock mLock = new ReentrantReadWriteLock(true);
 
@@ -105,6 +107,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         Log.i(TAG, "Creating database " + DB_NAME + " version " + DB_VERSION);
         createTableLog(db);
+        createTableSessions(db);
         createTableAccess(db);
         createTableDns(db);
         createTableForward(db);
@@ -134,10 +137,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 ", allowed INTEGER NULL" +
                 ", connection INTEGER NULL" +
                 ", interactive INTEGER NULL" +
-                ", sslversion INTEGER NULL" +
-                ", sslctype INTEGER NULL" +
-                ", sslhtype INTEGER NULL" +
-                ", sslcipher INTEGER NULL" +
                 ");");
         db.execSQL("CREATE INDEX idx_log_time ON log(time)");
         db.execSQL("CREATE INDEX idx_log_dest ON log(daddr)");
@@ -146,6 +145,28 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE INDEX idx_log_uid ON log(uid)");
     }
 
+    private void createTableSessions(SQLiteDatabase db) {
+
+        Log.i(TAG, "Creating sessions table");
+        db.execSQL("CREATE TABLE sessions (" +
+                " ID INTEGER PRIMARY KEY AUTOINCREMENT" +
+                ", uid INTEGER NULL" +
+                ", version INTEGER NULL" +
+                ", protocol INTEGER NULL" +
+                ", saddr TEXT" +
+                ", sport INTEGER NULL" +
+                ", daddr TEXT" +
+                ", dport INTEGER NULL" +
+                ", dname TEXT NULL" +
+                ", TLSversion INTEGER NULL" +
+                ", cipher INTEGER NULL" +
+                ", str TEXT" +
+                ");");
+        db.execSQL("CREATE INDEX idx_sessions_uid ON sessions(uid)");
+        db.execSQL("CREATE INDEX idx_sessions_dest ON sessions(daddr)");
+        db.execSQL("CREATE INDEX idx_sessions_dport ON sessions(dport)");
+        db.execSQL("CREATE INDEX idx_sessions_dname ON sessions(dname)");
+    }
     private void createTableAccess(SQLiteDatabase db) {
         Log.i(TAG, "Creating access table");
         db.execSQL("CREATE TABLE access (" +
@@ -211,8 +232,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
         Log.i(TAG, DB_NAME + " upgrading from version " + oldVersion + " to " + newVersion);
-
-        //TODO: maybe insert extra stuff for analysis
 
         db.beginTransaction();
         try {
@@ -319,16 +338,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 db.execSQL("CREATE INDEX IF NOT EXISTS idx_access_daddr ON access(daddr)");
                 oldVersion = 20;
             }
-            if (oldVersion < 22) {
-                if (!columnExists(db, "log", "sslversion"))
-                    db.execSQL("ALTER TABLE log ADD COLUMN sslversion INTEGER NULL");
-                if (!columnExists(db, "log", "sslctype"))
-                    db.execSQL("ALTER TABLE log ADD COLUMN sslctype INTEGER NULL");
-                if (!columnExists(db, "log", "sslhtype"))
-                    db.execSQL("ALTER TABLE log ADD COLUMN sslhtype INTEGER NULL");
-                if (!columnExists(db, "log", "sslcipher"))
-                    db.execSQL("ALTER TABLE log ADD COLUMN sslcipher INTEGER NULL");
-                oldVersion = 22;
+            if (oldVersion < 23) {
+                createTableSessions(db);
+                oldVersion = 23;
             }
 
             if (oldVersion == DB_VERSION) {
@@ -346,7 +358,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // Log
-
     public void insertLog(Packet packet, String dname, int connection, boolean interactive) {
         mLock.writeLock().lock();
         try {
@@ -393,12 +404,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 cv.put("connection", connection);
                 cv.put("interactive", interactive ? 1 : 0);
 
-                // TODO: ssl stuff
-                cv.put("sslversion", packet.sslversion);
-                cv.put("sslctype", packet.ctype);
-                cv.put("sslhtype", packet.htype);
-                cv.put("sslcipher", packet.cipher);
-
                 if (db.insert("log", null, cv) == -1)
                     Log.e(TAG, "Insert log failed");
 
@@ -413,7 +418,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         notifyLogChanged();
     }
 
-    // TODO: clear analysis too, or extra function?
     public void clearLog() {
         mLock.writeLock().lock();
         try {
@@ -435,7 +439,6 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         notifyLogChanged();
     }
 
-    // TODO: anaylsis cleanup too, or extra function?
     public void cleanupLog(long time) {
         mLock.writeLock().lock();
         try {
@@ -499,6 +502,142 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             mLock.readLock().unlock();
         }
     }
+
+    // Sessions
+    public void insertSession(Session session, String dname) {
+        mLock.writeLock().lock();
+        try {
+            SQLiteDatabase db = this.getWritableDatabase();
+            db.beginTransactionNonExclusive();
+            try {
+                ContentValues cv = new ContentValues();
+                if (session.uid < 0)
+                    cv.putNull("uid");
+                else
+                    cv.put("uid", session.uid);
+
+                cv.put("version", session.version);
+
+                if (session.protocol < 0)
+                    cv.putNull("protocol");
+                else
+                    cv.put("protocol", session.protocol);
+
+                cv.put("saddr", session.saddr);
+
+                if (session.sport < 0)
+                    cv.putNull("sport");
+                else
+                    cv.put("sport", session.sport);
+
+                cv.put("daddr", session.daddr);
+
+                if (session.dport < 0)
+                    cv.putNull("dport");
+                else
+                    cv.put("dport", session.dport);
+
+                if (dname == null)
+                    cv.putNull("dname");
+                else
+                    cv.put("dname", dname);
+
+                cv.put("TLSversion", session.TLSversion);
+                cv.put("cipher", session.cipher);
+                cv.put("str", session.str);
+
+                if (db.insert("sessions", null, cv) == -1)
+                    Log.e(TAG, "Insert sessions failed");
+
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        } finally {
+            mLock.writeLock().unlock();
+        }
+        notifyLogChanged();
+    }
+
+    public void clearSessions() {
+        mLock.writeLock().lock();
+        try {
+            SQLiteDatabase db = this.getWritableDatabase();
+            db.beginTransactionNonExclusive();
+            try {
+                db.delete("sessions", null, new String[]{});
+
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+
+            db.execSQL("VACUUM");
+        } finally {
+            mLock.writeLock().unlock();
+        }
+        notifyLogChanged();
+    }
+
+    public void cleanupSessions(long time) {
+        mLock.writeLock().lock();
+        try {
+            SQLiteDatabase db = this.getWritableDatabase();
+            db.beginTransactionNonExclusive();
+            try {
+                // There an index on time
+                int rows = db.delete("sessions", "time < ?", new String[]{Long.toString(time)});
+                Log.i(TAG, "Cleanup sessions" +
+                        " before=" + SimpleDateFormat.getDateTimeInstance().format(new Date(time)) +
+                        " rows=" + rows);
+
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        } finally {
+            mLock.writeLock().unlock();
+        }
+    }
+
+    public Cursor getSessions(boolean udp, boolean tcp, boolean other) {
+        mLock.readLock().lock();
+        try {
+            SQLiteDatabase db = this.getReadableDatabase();
+            // There is an index on time
+            // There is no index on protocol/allowed for write performance
+            String query = "SELECT ID AS _id, *";
+            query += " FROM sessions";
+            query += " WHERE (0 = 1";
+            if (udp)
+                query += " OR protocol = 17";
+            if (tcp)
+                query += " OR protocol = 6";
+            if (other)
+                query += " OR (protocol <> 6 AND protocol <> 17)";
+            query += ") AND (0 = 1";
+            query += ")";
+            query += " ORDER BY uid DESC";
+            return db.rawQuery(query, new String[]{});
+        } finally {
+            mLock.readLock().unlock();
+        }
+    }
+
+    public Cursor searchSessions(String find) {
+        mLock.readLock().lock();
+        try {
+            SQLiteDatabase db = this.getReadableDatabase();
+            String query = "SELECT ID AS _id, *";
+            query += " FROM sessions";
+            query += " WHERE daddr LIKE ? OR dport = ? OR uid = ?";
+            query += " ORDER BY time DESC";
+            return db.rawQuery(query, new String[]{"%" + find + "%", "%" + find + "%", find, find});
+        } finally {
+            mLock.readLock().unlock();
+        }
+    }
+
 
     // Access
 
@@ -969,13 +1108,20 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    //TODO: add AnalysisChangedListener?
     public void addLogChangedListener(LogChangedListener listener) {
         logChangedListeners.add(listener);
     }
 
     public void removeLogChangedListener(LogChangedListener listener) {
         logChangedListeners.remove(listener);
+    }
+
+    public void addSessionChangedListener(SessionChangedListener listener) {
+        sessionChangedListeners.add(listener);
+    }
+
+    public void removeSessionChangedListener(SessionChangedListener listener) {
+        sessionChangedListeners.remove(listener);
     }
 
     public void addAccessChangedListener(AccessChangedListener listener) {
@@ -995,6 +1141,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void notifyLogChanged() {
+        Message msg = handler.obtainMessage();
+        msg.what = MSG_LOG;
+        handler.sendMessage(msg);
+    }
+
+    private void notifySessionChanged() {
         Message msg = handler.obtainMessage();
         msg.what = MSG_LOG;
         handler.sendMessage(msg);
@@ -1038,6 +1190,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
                 }
 
+        } else if (msg.what == MSG_SESSION) {
+            for (SessionChangedListener listener : sessionChangedListeners)
+                try {
+                    listener.onChanged();
+                } catch (Throwable ex) {
+                    Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
+                }
+
         } else if (msg.what == MSG_FORWARD) {
             for (ForwardChangedListener listener : forwardChangedListeners)
                 try {
@@ -1049,6 +1209,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public interface LogChangedListener {
+        void onChanged();
+    }
+
+    public interface SessionChangedListener {
         void onChanged();
     }
 

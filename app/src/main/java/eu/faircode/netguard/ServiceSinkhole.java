@@ -161,6 +161,7 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
     private static final int MSG_STATS_UPDATE = 3;
     private static final int MSG_PACKET = 4;
     private static final int MSG_USAGE = 5;
+    private static final int MSG_SESSION = 6;
 
     private enum State {none, waiting, enforcing, stats}
 
@@ -598,12 +599,16 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
         @Override
         public void handleMessage(Message msg) {
             try {
-                if (powersaving && (msg.what == MSG_PACKET || msg.what == MSG_USAGE))
+                if (powersaving && (msg.what == MSG_PACKET || msg.what == MSG_SESSION || msg.what == MSG_USAGE))
                     return;
 
                 switch (msg.what) {
                     case MSG_PACKET:
                         log((Packet) msg.obj, msg.arg1, msg.arg2 > 0);
+                        break;
+
+                    case MSG_SESSION:
+                        log_Session((Session) msg.obj);
                         break;
 
                     case MSG_USAGE:
@@ -647,6 +652,21 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                     if (mapNoNotify.containsKey(packet.uid) && mapNoNotify.get(packet.uid))
                         showAccessNotification(packet.uid);
             }
+        }
+
+        private void log_Session(Session session) {
+            // Get settings
+            SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ServiceSinkhole.this);
+            boolean analysis = prefs.getBoolean("analysis", false);
+
+            DatabaseHelper dh = DatabaseHelper.getInstance(ServiceSinkhole.this);
+
+            // Get real name
+            String dname = dh.getQName(session.daddr);
+
+            // Traffic sessions
+            if (analysis)
+                dh.insertSession(session, dname);
         }
 
         private void usage(Usage usage) {
@@ -1468,6 +1488,15 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
         msg.arg2 = (last_interactive ? 1 : 0);
         logHandler.sendMessage(msg);
     }
+
+    // Called from native code
+    private void logSession(Session session) {
+        Message msg = logHandler.obtainMessage();
+        msg.obj = session;
+        msg.what = MSG_SESSION;
+        logHandler.sendMessage(msg);
+    }
+
 
     // Called from native code
     private void dnsResolved(ResourceRecord rr) {

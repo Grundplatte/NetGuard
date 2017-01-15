@@ -32,12 +32,6 @@ public class Packet {
     public int uid;
     public boolean allowed;
 
-    // ssl stuff
-    public int sslversion;
-    public int ctype;
-    public int htype;
-    public int cipher;
-
     public Packet() {
     }
 
