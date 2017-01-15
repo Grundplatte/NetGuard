@@ -2,9 +2,6 @@ package eu.faircode.netguard;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.pm.PackageManager;
-import android.database.Cursor;
-import android.graphics.Color;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
@@ -17,27 +14,14 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SearchView;
 import android.support.v7.widget.SwitchCompat;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.AdapterView;
 import android.widget.CompoundButton;
-import android.widget.FilterQueryProvider;
-import android.widget.ListAdapter;
-import android.widget.ListView;
-import android.widget.PopupMenu;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.squareup.picasso.Picasso;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.text.SimpleDateFormat;
@@ -106,163 +90,13 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         boolean udp = prefs.getBoolean("proto_udp", true);
         boolean tcp = prefs.getBoolean("proto_tcp", true);
         boolean other = prefs.getBoolean("proto_other", true);
-        boolean allowed = prefs.getBoolean("traffic_allowed", true);
-        boolean blocked = prefs.getBoolean("traffic_blocked", true);
 
         // List all incoming packets
         rvAnalysis = (RecyclerView) findViewById(R.id.rvAnalysis);
         rvAnalysis.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new AdapterAnalysis(this, DatabaseHelper.getInstance(this).getLog(udp, tcp, other, allowed, blocked), true, true);
-        // todo: implement
-        /*
-        adapter.setFilterQueryProvider(new FilterQueryProvider() {
-            public Cursor runQuery(CharSequence constraint) {
-                return DatabaseHelper.getInstance(ActivityAnalysis.this).searchLog(constraint.toString());
-            }
-        });
-        */
+        adapter = new AdapterAnalysis(this, DatabaseHelper.getInstance(this).getLog(udp, tcp, other, true, true));
+
         rvAnalysis.setAdapter(adapter);
-
-        try {
-            vpn4 = InetAddress.getByName(prefs.getString("vpn4", "10.1.10.1"));
-            vpn6 = InetAddress.getByName(prefs.getString("vpn6", "fd00:1:fd00:1:fd00:1:fd00:1"));
-        } catch (UnknownHostException ex) {
-            Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
-        }
-
-
-        /*
-        lvAnalysis.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                PackageManager pm = getPackageManager();
-                Cursor cursor = (Cursor) adapter.getItem(position);
-                long time = cursor.getLong(cursor.getColumnIndex("time"));
-                int version = cursor.getInt(cursor.getColumnIndex("version"));
-                int protocol = cursor.getInt(cursor.getColumnIndex("protocol"));
-                final String saddr = cursor.getString(cursor.getColumnIndex("saddr"));
-                final int sport = (cursor.isNull(cursor.getColumnIndex("sport")) ? -1 : cursor.getInt(cursor.getColumnIndex("sport")));
-                final String daddr = cursor.getString(cursor.getColumnIndex("daddr"));
-                final int dport = (cursor.isNull(cursor.getColumnIndex("dport")) ? -1 : cursor.getInt(cursor.getColumnIndex("dport")));
-                final String dname = cursor.getString(cursor.getColumnIndex("dname"));
-                final int uid = (cursor.isNull(cursor.getColumnIndex("uid")) ? -1 : cursor.getInt(cursor.getColumnIndex("uid")));
-                int allowed = (cursor.isNull(cursor.getColumnIndex("allowed")) ? -1 : cursor.getInt(cursor.getColumnIndex("allowed")));
-
-                // Get external address
-                InetAddress addr = null;
-                try {
-                    addr = InetAddress.getByName(daddr);
-                } catch (UnknownHostException ex) {
-                    Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
-                }
-
-                String ip;
-                int port;
-                if (addr.equals(vpn4) || addr.equals(vpn6)) {
-                    ip = saddr;
-                    port = sport;
-                } else {
-                    ip = daddr;
-                    port = dport;
-                }
-
-                // Build popup menu
-                PopupMenu popup = new PopupMenu(ActivityAnalysis.this, findViewById(R.id.vwPopupAnchor));
-                popup.inflate(R.menu.analysispopup);
-
-                // Application name
-                if (uid >= 0)
-                    popup.getMenu().findItem(R.id.menu_application).setTitle(TextUtils.join(", ", Util.getApplicationNames(uid, ActivityAnalysis.this)));
-                else
-                    popup.getMenu().removeItem(R.id.menu_application);
-
-                // Destination IP
-                popup.getMenu().findItem(R.id.menu_protocol).setTitle(Util.getProtocolName(protocol, version, false));
-
-                // Whois
-                final Intent lookupIP = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.tcpiputils.com/whois-lookup/" + ip));
-                if (pm.resolveActivity(lookupIP, 0) == null)
-                    popup.getMenu().removeItem(R.id.menu_whois);
-                else
-                    popup.getMenu().findItem(R.id.menu_whois).setTitle(getString(R.string.title_log_whois, ip));
-
-                // Lookup port
-                final Intent lookupPort = new Intent(Intent.ACTION_VIEW, Uri.parse("http://www.speedguide.net/port.php?port=" + port));
-                if (port <= 0 || pm.resolveActivity(lookupPort, 0) == null)
-                    popup.getMenu().removeItem(R.id.menu_port);
-                else
-                    popup.getMenu().findItem(R.id.menu_port).setTitle(getString(R.string.title_log_port, port));
-
-                if (!prefs.getBoolean("filter", false)) {
-                    popup.getMenu().removeItem(R.id.menu_allow);
-                    popup.getMenu().removeItem(R.id.menu_block);
-                }
-
-                final Packet packet = new Packet();
-                packet.version = version;
-                packet.protocol = protocol;
-                packet.daddr = daddr;
-                packet.dport = dport;
-                packet.time = time;
-                packet.uid = uid;
-                packet.allowed = (allowed > 0);
-
-                // Time
-                popup.getMenu().findItem(R.id.menu_time).setTitle(SimpleDateFormat.getDateTimeInstance().format(time));
-
-                // Handle click
-                popup.setOnMenuItemClickListener(new PopupMenu.OnMenuItemClickListener() {
-                    @Override
-                    public boolean onMenuItemClick(MenuItem menuItem) {
-                        switch (menuItem.getItemId()) {
-                            case R.id.menu_application: {
-                                Intent main = new Intent(ActivityAnalysis.this, ActivityMain.class);
-                                main.putExtra(ActivityMain.EXTRA_SEARCH, Integer.toString(uid));
-                                startActivity(main);
-                                return true;
-                            }
-
-                            case R.id.menu_whois:
-                                startActivity(lookupIP);
-                                return true;
-
-                            case R.id.menu_port:
-                                startActivity(lookupPort);
-                                return true;
-
-                            case R.id.menu_allow:
-                                if (IAB.isPurchased(ActivityPro.SKU_FILTER, ActivityAnalysis.this)) {
-                                    DatabaseHelper.getInstance(ActivityAnalysis.this).updateAccess(packet, dname, 0);
-                                    ServiceSinkhole.reload("allow host", ActivityAnalysis.this);
-                                    Intent main = new Intent(ActivityAnalysis.this, ActivityMain.class);
-                                    main.putExtra(ActivityMain.EXTRA_SEARCH, Integer.toString(uid));
-                                    startActivity(main);
-                                } else
-                                    startActivity(new Intent(ActivityAnalysis.this, ActivityPro.class));
-                                return true;
-
-                            case R.id.menu_block:
-                                if (IAB.isPurchased(ActivityPro.SKU_FILTER, ActivityAnalysis.this)) {
-                                    DatabaseHelper.getInstance(ActivityAnalysis.this).updateAccess(packet, dname, 1);
-                                    ServiceSinkhole.reload("block host", ActivityAnalysis.this);
-                                    Intent main = new Intent(ActivityAnalysis.this, ActivityMain.class);
-                                    main.putExtra(ActivityMain.EXTRA_SEARCH, Integer.toString(uid));
-                                    startActivity(main);
-                                } else
-                                    startActivity(new Intent(ActivityAnalysis.this, ActivityPro.class));
-                                return true;
-
-                            default:
-                                return false;
-                        }
-                    }
-                });
-
-                // Show
-                popup.show();
-            }
-        });
-        */
         live = true;
     }
 
@@ -316,19 +150,20 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         inflater.inflate(R.menu.analysisoptions, menu);
 
         menuSearch = menu.findItem(R.id.menu_search);
-        SearchView searchView = (SearchView) MenuItemCompat.getActionView(menuSearch);
+        final SearchView searchView = (SearchView) MenuItemCompat.getActionView(menuSearch);
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
                 if (adapter != null);
-                   // adapter.getFilter().filter(query); //todo implement
+                    adapter.getFilter().filter(query);
+                searchView.clearFocus();
                 return true;
             }
 
             @Override
             public boolean onQueryTextChange(String newText) {
                 if (adapter != null);
-                   // adapter.getFilter().filter(newText); //todo implement
+                    adapter.getFilter().filter(newText);
                 return true;
             }
         });
@@ -336,7 +171,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
             @Override
             public boolean onClose() {
                 if (adapter != null);
-                   // adapter.getFilter().filter(null); //todo implement
+                    adapter.getFilter().filter(null);
                 return true;
             }
         });
@@ -351,9 +186,6 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         menu.findItem(R.id.menu_protocol_udp).setChecked(prefs.getBoolean("proto_udp", true));
         menu.findItem(R.id.menu_protocol_tcp).setChecked(prefs.getBoolean("proto_tcp", true));
         menu.findItem(R.id.menu_protocol_other).setChecked(prefs.getBoolean("proto_other", true));
-        menu.findItem(R.id.menu_traffic_allowed).setEnabled(prefs.getBoolean("filter", false));
-        menu.findItem(R.id.menu_traffic_allowed).setChecked(prefs.getBoolean("traffic_allowed", true));
-        menu.findItem(R.id.menu_traffic_blocked).setChecked(prefs.getBoolean("traffic_blocked", true));
 
         menu.findItem(R.id.menu_analysis_refresh).setEnabled(!menu.findItem(R.id.menu_anaysis_live).isChecked());
 
@@ -385,18 +217,6 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
             case R.id.menu_protocol_other:
                 item.setChecked(!item.isChecked());
                 prefs.edit().putBoolean("proto_other", item.isChecked()).apply();
-                updateAdapter();
-                return true;
-
-            case R.id.menu_traffic_allowed:
-                item.setChecked(!item.isChecked());
-                prefs.edit().putBoolean("traffic_allowed", item.isChecked()).apply();
-                updateAdapter();
-                return true;
-
-            case R.id.menu_traffic_blocked:
-                item.setChecked(!item.isChecked());
-                prefs.edit().putBoolean("traffic_blocked", item.isChecked()).apply();
                 updateAdapter();
                 return true;
 
@@ -447,12 +267,10 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
             boolean udp = prefs.getBoolean("proto_udp", true);
             boolean tcp = prefs.getBoolean("proto_tcp", true);
             boolean other = prefs.getBoolean("proto_other", true);
-            boolean allowed = prefs.getBoolean("traffic_allowed", true);
-            boolean blocked = prefs.getBoolean("traffic_blocked", true);
-            adapter.changeCursor(DatabaseHelper.getInstance(this).getLog(udp, tcp, other, allowed, blocked));
+            adapter.changeCursor(DatabaseHelper.getInstance(this).getLog(udp, tcp, other, true, true));
             if (menuSearch != null && menuSearch.isActionViewExpanded()) {
                 SearchView searchView = (SearchView) MenuItemCompat.getActionView(menuSearch);
-                //adapter.getFilter().filter(searchView.getQuery().toString()); //todo implement
+                adapter.getFilter().filter(searchView.getQuery().toString());
             }
         }
     }
