@@ -332,7 +332,7 @@ public class ActivityLog extends AppCompatActivity implements SharedPreferences.
         searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
             @Override
             public boolean onQueryTextSubmit(String query) {
-                if (adapter != null)
+                if (adapter != null);
                     adapter.getFilter().filter(query);
                 return true;
             }
@@ -347,7 +347,7 @@ public class ActivityLog extends AppCompatActivity implements SharedPreferences.
         searchView.setOnCloseListener(new SearchView.OnCloseListener() {
             @Override
             public boolean onClose() {
-                if (adapter != null)
+                if (adapter != null);
                     adapter.getFilter().filter(null);
                 return true;
             }
