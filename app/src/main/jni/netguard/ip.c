@@ -309,11 +309,6 @@ void handle_ip(const struct arguments *args,
 
     // TODO: implement tls parsing
     if( protocol == IPPROTO_TCP && dport == 443) {
-        // handle payload
-        const uint16_t tcplen = (const uint16_t) (length - (payload - pkt));
-        size_t out_len;
-        payload_str = base64_encode(payload, tcplen, &out_len);
-
         // check if its a TLS packet
         const struct tcphdr *tcphdr = (struct tcphdr *) payload;
         const uint8_t tcpoptlen = (uint8_t) ((tcphdr->doff - 5) * 4);
@@ -384,6 +379,16 @@ void handle_ip(const struct arguments *args,
             }
         }
 
+    }
+    else if(protocol == IPPROTO_TCP){
+        // handle payload
+        const struct tcphdr *tcphdr = (struct tcphdr *) payload;
+        const uint8_t tcpoptlen = (uint8_t) ((tcphdr->doff - 5) * 4);
+        const uint8_t *data = payload + sizeof(struct tcphdr) + tcpoptlen;
+
+        const uint16_t tcplen = (const uint16_t) (length - (data - pkt));
+        size_t out_len;
+        payload_str = base64_encode(payload, tcplen, &out_len);
     }
 
     // Check if allowed

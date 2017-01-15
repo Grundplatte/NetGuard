@@ -6,36 +6,18 @@
 
 //TODO: use shit
 
-void analyse_tcp_header(struct tcp *hdr)
+
+// search for different strings like IMEI, IMSI, "password", etc.
+bool analyse_payload(const uint8_t *buffer, size_t length)
 {
+    uint8_t *end = buffer + length;
 
-}
+    for(int i=0; i < length; i++){
+        uint8_t *start = buffer;
+        while(false) {
 
-void analyse_icmp_header(struct icmp *hdr)
-{
+        }
+    }
 
-}
-
-void analyse_ip4_header(struct iphdr *hdr)
-{
-
-
-}
-
-void analyse_ip6_header(struct  ip6_hdr *hdr)
-{
-
-
-}
-
-void analyse_udp_header(struct udp *hdr)
-{
-
-
-}
-
-void analyse_payload(const uint8_t *buffer, size_t length)
-{
-
-
+    return false;
 }

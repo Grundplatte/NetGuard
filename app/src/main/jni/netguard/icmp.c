@@ -267,9 +267,6 @@ jboolean handle_icmp(const struct arguments *args,
         server6.sin6_port = 0;
     }
 
-    // TODO: correct?
-    analyse_icmp_header(icmp);
-
     // Send raw ICMP message
     if (sendto(cur->socket, icmp, (socklen_t) icmplen, MSG_NOSIGNAL,
                (const struct sockaddr *) (version == 4 ? &server4 : &server6),
