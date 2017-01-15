@@ -60,7 +60,7 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
     const char *session = "eu/faircode/netguard/Packet";
     clsSession = jniGlobalRef(env, jniFindClass(env, session));
 
-    const char *packet = "eu/faircode/netguard/Packet";
+    const char *packet = "eu/faircode/netguard/Session";
     clsPacket = jniGlobalRef(env, jniFindClass(env, packet));
 
     const char *allowed = "eu/faircode/netguard/Allowed";
