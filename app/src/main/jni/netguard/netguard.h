@@ -498,21 +498,19 @@ jobject create_packet(const struct arguments *args,
                       jint uid,
                       jboolean allowed);
 
-jobject create_packet_ssl(const struct arguments *args,
+void logSession(const struct arguments *args, jobject jpacket);
+
+jobject create_session(const struct arguments *args,
+                      jint uid,
                       jint version,
                       jint protocol,
-                      const char *flags,
                       const char *source,
                       jint sport,
                       const char *dest,
                       jint dport,
-                      const char *data,
-                      jint uid,
-                      jboolean allowed,
                       jint sslversion,
-                      jint ctype,
-                      jint htype,
-                      jint cipher);
+                      jint cipher,
+                      const char *str);
 
 void account_usage(const struct arguments *args, jint version, jint protocol,
                    const char *daddr, jint dport, jint uid, jlong sent, jlong received);

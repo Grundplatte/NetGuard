@@ -42,6 +42,7 @@ extern long pcap_file_size;
 
 // JNI
 
+jclass clsSession;
 jclass clsPacket;
 jclass clsAllowed;
 jclass clsRR;
@@ -694,11 +695,6 @@ jfieldID fidData = NULL;
 jfieldID fidUid = NULL;
 jfieldID fidAllowed = NULL;
 
-// ssl stuff
-jfieldID fidSSLVersion = NULL;
-jfieldID fidCType = NULL;
-jfieldID fidHType = NULL;
-jfieldID fidCipher = NULL;
 
 jobject create_packet(const struct arguments *args,
                       jint version,
@@ -711,24 +707,6 @@ jobject create_packet(const struct arguments *args,
                       const char *data,
                       jint uid,
                       jboolean allowed) {
-    return create_packet_ssl(args, version, protocol, flags, source, sport, dest, dport, data, uid, allowed, 0, 0, 0, 0);
-}
-
-jobject create_packet_ssl(const struct arguments *args,
-                      jint version,
-                      jint protocol,
-                      const char *flags,
-                      const char *source,
-                      jint sport,
-                      const char *dest,
-                      jint dport,
-                      const char *data,
-                      jint uid,
-                      jboolean allowed,
-                      jint sslversion,
-                      jint ctype,
-                      jint htype,
-                      jint cipher) {
     JNIEnv *env = args->env;
 
 #ifdef PROFILE_JNI
@@ -761,12 +739,6 @@ jobject create_packet_ssl(const struct arguments *args,
         fidData = jniGetFieldID(env, clsPacket, "data", string);
         fidUid = jniGetFieldID(env, clsPacket, "uid", "I");
         fidAllowed = jniGetFieldID(env, clsPacket, "allowed", "Z");
-
-        // ssl stuff
-        fidSSLVersion = jniGetFieldID(env, clsPacket, "sslversion", "I");
-        fidCType = jniGetFieldID(env, clsPacket, "ctype", "I");
-        fidHType = jniGetFieldID(env, clsPacket, "htype", "I");
-        fidCipher = jniGetFieldID(env, clsPacket, "cipher", "I");
     }
 
     struct timeval tv;
@@ -788,11 +760,6 @@ jobject create_packet_ssl(const struct arguments *args,
     (*env)->SetObjectField(env, jpacket, fidData, jdata);
     (*env)->SetIntField(env, jpacket, fidUid, uid);
     (*env)->SetBooleanField(env, jpacket, fidAllowed, allowed);
-    // ssl stuff
-    (*env)->SetIntField(env, jpacket, fidSSLVersion, sslversion);
-    (*env)->SetIntField(env, jpacket, fidCType, ctype);
-    (*env)->SetIntField(env, jpacket, fidHType, htype);
-    (*env)->SetIntField(env, jpacket, fidCipher, cipher);
 
     (*env)->DeleteLocalRef(env, jdata);
     (*env)->DeleteLocalRef(env, jdest);
@@ -809,6 +776,128 @@ jobject create_packet_ssl(const struct arguments *args,
 #endif
 
     return jpacket;
+}
+
+
+static jmethodID midLogSession = NULL;
+
+void logSession(const struct arguments *args, jobject jsession) {
+#ifdef PROFILE_JNI
+    float mselapsed;
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+#endif
+
+    jclass clsService = (*args->env)->GetObjectClass(args->env, args->instance);
+
+    const char *signature = "(Leu/faircode/netguard/Session;)V";
+    if (midLogSession == NULL)
+        midLogSession = jniGetMethodID(args->env, clsService, "logSession", signature);
+
+    (*args->env)->CallObjectMethod(args->env, args->instance, midLogSession, jsession);
+
+    (*args->env)->DeleteLocalRef(args->env, jsession);
+    (*args->env)->DeleteLocalRef(args->env, clsService);
+
+#ifdef PROFILE_JNI
+    gettimeofday(&end, NULL);
+    mselapsed = (end.tv_sec - start.tv_sec) * 1000.0 +
+                (end.tv_usec - start.tv_usec) / 1000.0;
+    if (mselapsed > PROFILE_JNI)
+        log_android(ANDROID_LOG_WARN, "is_address_allowed %f", mselapsed);
+#endif
+
+}
+
+jmethodID midInitSession = NULL;
+
+jfieldID fidSessionUid = NULL;
+jfieldID fidSessionVersion = NULL;
+jfieldID fidSessionProtocol = NULL;
+jfieldID fidSessionSaddr = NULL;
+jfieldID fidSessionSport = NULL;
+jfieldID fidSessionDaddr = NULL;
+jfieldID fidSessionDport = NULL;
+
+// ssl stuff
+jfieldID fidTLSVersion = NULL;
+jfieldID fidCipher = NULL;
+jfieldID fidStr = NULL;
+
+
+jobject create_session(const struct arguments *args,
+                       jint uid,
+                       jint version,
+                       jint protocol,
+                       const char *source,
+                       jint sport,
+                       const char *dest,
+                       jint dport,
+                       jint tlsversion,
+                       jint cipher,
+                       const char *str) {
+    JNIEnv *env = args->env;
+
+#ifdef PROFILE_JNI
+    float mselapsed;
+    struct timeval start, end;
+    gettimeofday(&start, NULL);
+#endif
+
+    /*
+        jbyte b[] = {1,2,3};
+        jbyteArray ret = env->NewByteArray(3);
+        env->SetByteArrayRegion (ret, 0, 3, b);
+     */
+
+    const char *session = "eu/faircode/netguard/Session";
+    if (midInitSession == NULL)
+        midInitSession = jniGetMethodID(env, clsSession, "<init>", "()V");
+    jobject jsession = jniNewObject(env, clsSession, midInitSession, session);
+
+    if (fidSessionVersion == NULL) {
+        const char *string = "Ljava/lang/String;";
+        fidSessionUid = jniGetFieldID(env, clsSession, "uid", "I");
+        fidSessionVersion = jniGetFieldID(env, clsSession, "version", "I");
+        fidSessionProtocol = jniGetFieldID(env, clsSession, "protocol", "I");
+        fidSessionSaddr = jniGetFieldID(env, clsSession, "saddr", string);
+        fidSessionSport = jniGetFieldID(env, clsSession, "sport", "I");
+        fidSessionDaddr = jniGetFieldID(env, clsSession, "daddr", string);
+        fidSessionDport = jniGetFieldID(env, clsSession, "dport", "I");
+        fidTLSVersion = jniGetFieldID(env, clsSession, "TLSversion", "I");
+        fidCipher = jniGetFieldID(env, clsSession, "cipher", "I");
+        fidStr = jniGetFieldID(env, clsSession, "str", string);
+    }
+
+    jstring jsource = (*env)->NewStringUTF(env, source);
+    jstring jdest = (*env)->NewStringUTF(env, dest);
+    jstring jStr = (*env)->NewStringUTF(env, str);
+
+    (*env)->SetIntField(env, jsession, fidSessionUid, uid);
+    (*env)->SetIntField(env, jsession, fidSessionVersion, version);
+    (*env)->SetIntField(env, jsession, fidSessionProtocol, protocol);
+    (*env)->SetObjectField(env, jsession, fidSessionSaddr, jsource);
+    (*env)->SetIntField(env, jsession, fidSessionSport, sport);
+    (*env)->SetObjectField(env, jsession, fidSessionDaddr, jdest);
+    (*env)->SetIntField(env, jsession, fidSessionDport, dport);
+    (*env)->SetIntField(env, jsession, fidTLSVersion, tlsversion);
+    (*env)->SetIntField(env, jsession, fidCipher, cipher);
+    (*env)->SetObjectField(env, jsession, fidStr, jStr);
+
+    (*env)->DeleteLocalRef(env, jdest);
+    (*env)->DeleteLocalRef(env, jsource);
+    (*env)->DeleteLocalRef(env, jStr);
+    // Caller needs to delete reference to packet
+
+#ifdef PROFILE_JNI
+    gettimeofday(&end, NULL);
+    mselapsed = (end.tv_sec - start.tv_sec) * 1000.0 +
+                (end.tv_usec - start.tv_usec) / 1000.0;
+    if (mselapsed > PROFILE_JNI)
+        log_android(ANDROID_LOG_WARN, "create_packet %f", mselapsed);
+#endif
+
+    return jsession;
 }
 
 jmethodID midAccountUsage = NULL;
