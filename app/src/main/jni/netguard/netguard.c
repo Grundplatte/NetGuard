@@ -797,7 +797,7 @@ void logSession(const struct arguments *args, jobject jsession) {
     if (midLogSession == NULL)
         midLogSession = jniGetMethodID(args->env, clsService, "logSession", signature);
 
-    (*args->env)->CallObjectMethod(args->env, args->instance, midLogSession, jsession);
+    (*args->env)->CallVoidMethod(args->env, args->instance, midLogSession, jsession);
 
     (*args->env)->DeleteLocalRef(args->env, jsession);
     (*args->env)->DeleteLocalRef(args->env, clsService);
