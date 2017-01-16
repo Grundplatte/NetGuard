@@ -662,9 +662,6 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
 
             DatabaseHelper dh = DatabaseHelper.getInstance(ServiceSinkhole.this);
 
-
-
-
             // Traffic sessions
             if (analysis) {
                 long sessionId = -1;
@@ -673,6 +670,10 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                 sessionId = dh.getExistingSessionId(packet);
                 if(sessionId < 0) {
                     sessionId = dh.insertSession(packet, dname);
+                }
+                else {
+                    // upgrade entry
+                    dh.updateSession(packet, sessionId);
                 }
                 dh.insertSessionPacket(packet, dname, sessionId);
             }

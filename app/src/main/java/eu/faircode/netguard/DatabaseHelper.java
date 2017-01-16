@@ -582,13 +582,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 else
                     cv.put("dname", dname);
 
-                cv.put("TLSversion", packet.TLSversion);
-                cv.put("cipher", packet.cipher);
-                cv.put("hash", packet.hash);
+                if(packet.TLSversion != 0)
+                    cv.put("TLSversion", packet.TLSversion);
 
-                cv.put("data", packet.data);
+                if(packet.cipher != 0)
+                    cv.put("cipher", packet.cipher);
 
-                cv.put("flags", packet.flags);
+                if(packet.hash != 0)
+                    cv.put("hash", packet.hash);
 
                 sessionId = db.insert("sessions", null, cv);
                 if (sessionId == -1)
@@ -603,6 +604,33 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         notifySessionChanged();
         return sessionId;
+    }
+
+    public void updateSession(SessionPacket packet, long sessionId) {
+        mLock.writeLock().lock();
+        try {
+            SQLiteDatabase db = this.getWritableDatabase();
+            db.beginTransactionNonExclusive();
+            try {
+                String sql = "UPDATE sessions SET";
+                sql += " TLSversion = IFNULL(TLSversion, ?),";
+                sql += " cipher = IFNULL(cipher, ?)";
+                sql += " WHERE ID = ?";
+                db.execSQL(sql, new Object[]{packet.TLSversion, packet.cipher, sessionId});
+
+                sql = "UPDATE sessions SET";
+                sql += " time = ?";
+                sql += " WHERE ID = ?";
+                db.execSQL(sql, new Object[]{packet.time, sessionId});
+
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        } finally {
+            mLock.writeLock().unlock();
+        }
+        notifySessionChanged();
     }
 
     public void clearSessions() {
@@ -789,7 +817,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    public Cursor getSessionPackets(boolean udp, boolean tcp, boolean other) {
+    public Cursor getSessionPackets(long sessionId) {
         mLock.readLock().lock();
         try {
             SQLiteDatabase db = this.getReadableDatabase();
@@ -797,16 +825,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             // There is no index on protocol/allowed for write performance
             String query = "SELECT ID AS _id, *";
             query += " FROM sessionPackets";
-            query += " WHERE (0 = 1";
-            if (udp)
-                query += " OR protocol = 17";
-            if (tcp)
-                query += " OR protocol = 6";
-            if (other)
-                query += " OR (protocol <> 6 AND protocol <> 17)";
-            query += ")";
+            query += " WHERE (sessionId = ?)";
             query += " ORDER BY time DESC";
-            return db.rawQuery(query, new String[]{});
+            return db.rawQuery(query, new String[]{Long.toString(sessionId)});
         } finally {
             mLock.readLock().unlock();
         }

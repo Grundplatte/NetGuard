@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.preference.PreferenceManager;
+import android.provider.ContactsContract;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.support.v4.view.ViewCompat;
 import android.support.v7.widget.RecyclerView;
@@ -61,6 +62,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
     private int colPacketData;
     private int colPacketFlags;
 
+    private int colSessionId;
     private int colSessionUid;
     private int colSessionTime;
     private int colSessionVersion;
@@ -166,11 +168,12 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         oldCount = newCount;
     }
 
-    public AdapterAnalysis(Context context, Cursor cursorPacket, Cursor cursorSession){
+    public AdapterAnalysis(Context context, Cursor cursorSession){
         super(context, cursorSession);
 
         this.context = context;
 
+        /*
         // Session Packet Table
         colPacketSessionId = cursorPacket.getColumnIndex("sessionId");
         colPacketUid = cursorPacket.getColumnIndex("uid");
@@ -187,8 +190,10 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         colPacketCipher = cursorPacket.getColumnIndex("cipher");
         colPacketHash = cursorPacket.getColumnIndex("hash");
         colPacketFlags = cursorPacket.getColumnIndex("flags");
+        */
 
         // Session Packet Table
+        colSessionId = cursorSession.getColumnIndex("ID");
         colSessionUid = cursorSession.getColumnIndex("uid");
         colSessionTime = cursorSession.getColumnIndex("time");
         colSessionVersion = cursorSession.getColumnIndex("version");
@@ -358,9 +363,11 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
 
         // show details (expand)
         if(listExpanded.get((int)pos)) {
+            // FIXME: not needed?
             cursor.moveToPosition((int)pos);
 
             //String payload = (cursor.isNull(colPacketData) ? "" : cursor.getString(colPacketData));
+            long sessionId = (cursor.isNull(colSessionId) ? -1 : cursor.getLong(colSessionId));
             int version = (cursor.isNull(colSessionVersion) ? -1 : cursor.getInt(colSessionVersion));
             int protocol = (cursor.isNull(colSessionProtocol) ? -1 : cursor.getInt(colSessionProtocol));
             int SSLversion = (cursor.isNull(colSessionTLSversion) ? -1 : cursor.getInt(colSessionTLSversion));
@@ -390,6 +397,9 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
             viewHolder.tvPacketType.setText("    Type: " + getKnownPort(dport));
 
             viewHolder.tvPayload.setText("FAG");
+
+            // TODO: show packets
+            //Cursor packetsCursor = DatabaseHelper.getInstance(context).getSessionPackets(sessionId);
 
             // Show organization
                 if (!isKnownAddress(daddr))

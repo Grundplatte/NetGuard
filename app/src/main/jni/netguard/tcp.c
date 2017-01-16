@@ -1270,6 +1270,8 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
 
     // TODO: in log
     struct sslData sslData;
+    memset(&sslData, NULL, sizeof(struct sslData));
+
     if(dport == 443 && datalen > 0) {
         analyze_ssl(data, datalen, &sslData);
     }

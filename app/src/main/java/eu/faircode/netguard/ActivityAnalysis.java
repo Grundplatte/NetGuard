@@ -93,8 +93,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         // List all incoming packets
         rvAnalysis = (RecyclerView) findViewById(R.id.rvAnalysis);
         rvAnalysis.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new AdapterAnalysis(this, DatabaseHelper.getInstance(this).getSessionPackets(udp, tcp, other),
-                DatabaseHelper.getInstance(this).getSessions(udp, tcp, other));
+        adapter = new AdapterAnalysis(this, DatabaseHelper.getInstance(this).getSessions(udp, tcp, other));
 
         rvAnalysis.setAdapter(adapter);
         live = true;

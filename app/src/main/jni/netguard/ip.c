@@ -331,6 +331,8 @@ void handle_ip(const struct arguments *args,
 
     // TODO: out log
     struct sslData sslData;
+    memset(&sslData, NULL, sizeof(struct sslData));
+
     if(protocol == IPPROTO_TCP && dport == 443 && datalength > 0) {
         analyze_ssl(data, datalength, &sslData);
     }
