@@ -1247,8 +1247,9 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
         *(options + 7) = 0; // End, padding
     }
 
-    sport = ntohs(tcp->source);
-    dport = ntohs(tcp->dest);
+    // TODO: check (ports are switched)
+    dport = ntohs(tcp->source);
+    sport = ntohs(tcp->dest);
 
     // Continue checksum
     csum = calc_checksum(csum, (uint8_t *) tcp, sizeof(struct tcphdr));
@@ -1345,8 +1346,8 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
     }
 
     jobject objSession = create_session(
-            args, cur->uid, cur->version, IPPROTO_TCP, source, dport,
-            dest, sport, sslversion, sslcipher, "Write_TCP!");
+            args, cur->uid, cur->version, IPPROTO_TCP, source, sport,
+            dest, dport, sslversion, sslcipher, "Write_TCP!");
 
     // Loggerino
     logSession(args, objSession);
