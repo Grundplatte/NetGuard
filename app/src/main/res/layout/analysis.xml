@@ -31,7 +31,8 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:textAppearance="@style/TextSmall"
-            android:textSize="12sp" />
+            android:textSize="12sp"
+            android:textAlignment="viewStart" />
 
         <ImageView
             android:id="@+id/ivIcon"
@@ -64,6 +65,17 @@
             android:layout_height="wrap_content"
             android:layout_gravity="center_vertical"
             android:gravity="end"
+            android:textAppearance="@style/TextSmall"
+            android:textSize="12sp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/tvPacketCount"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_vertical"
+            android:layout_marginLeft="4dp"
+            android:layout_marginStart="4dp"
             android:textAppearance="@style/TextSmall"
             android:textSize="12sp"
             android:layout_weight="1" />
@@ -109,7 +121,6 @@
                 android:id="@+id/textView22" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/tvName"
@@ -117,7 +128,6 @@
                 android:textSize="14sp" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/tvAppVersion" />
@@ -157,13 +167,11 @@
                 android:id="@+id/textView13" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/tvHTTP" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/tvProtocol" />
@@ -204,31 +212,41 @@
                 android:id="@+id/textView15" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/tvTLSversion" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/tvCipher"
+                android:id="@+id/tvCipherProtocol"
                 android:layout_weight="1" />
 
             <TextView
-                android:text="TextView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/tvHashAlgo" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:id="@+id/tvHash"
+                android:id="@+id/tvKxAlgo"
                 android:layout_weight="1" />
 
             <TextView
-                android:text="TextView"
-                android:layout_width="wrap_content"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:id="@+id/tvKeyExchange"
-                android:layout_weight="1" />
+                android:id="@+id/tvAuthAlgo" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/tvSymEncAlgo" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/tvSymEncKeySize" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -253,7 +271,7 @@
                 android:id="@+id/textView16" />
 
             <TextView
-                android:text="  Packet was sent to the following address:"
+                android:text="  Packets are sent to the following address:"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/textView9"
@@ -264,34 +282,34 @@
                 android:layout_height="10dp" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/tvIP" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/tvIPname" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/tvOrganization" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:id="@+id/tvPort" />
 
             <TextView
-                android:text="TextView"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:id="@+id/tvPacketType" />
+                android:id="@+id/tvPacketsReceived" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:id="@+id/tvPacketsSent" />
 
             <TextView
                 android:layout_width="match_parent"
@@ -322,15 +340,11 @@
                 android:id="@+id/textView11"
                 android:textSize="18sp" />
 
-            <TextView
+            <ListView
                 android:layout_width="match_parent"
-                android:layout_height="10dp"
-                android:id="@+id/textView19" />
+                android:layout_height="match_parent"
+                android:id="@+id/lvPayload" />
 
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:id="@+id/tvPayload" />
         </LinearLayout>
 
     </LinearLayout>

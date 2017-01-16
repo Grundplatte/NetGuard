@@ -637,13 +637,8 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
             String dname = dh.getQName(packet.daddr);
 
             // Traffic log
-            // FIXME: remove analysis
             if (log || analysis)
                 dh.insertLog(packet, dname, connection, interactive);
-
-            //if (analysis)
-            // TODO: add an analysis + log analysis results
-
 
             // Application log
             if (log_app && packet.uid >= 0 && !(packet.uid == 0 && packet.protocol == 17 && packet.dport == 53)) {

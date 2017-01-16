@@ -612,7 +612,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             SQLiteDatabase db = this.getWritableDatabase();
             db.beginTransactionNonExclusive();
             try {
-                if(packet.uid != 0) {
+                if(packet.uid > 0) {
                     String sql = "UPDATE sessions SET";
                     sql += " uid = IFNULL(uid, ?)";
                     sql += " WHERE ID = ?";

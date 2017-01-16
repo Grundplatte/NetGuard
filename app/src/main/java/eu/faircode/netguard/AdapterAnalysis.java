@@ -74,7 +74,6 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
     private int colSessionDName;
     private int colSessionTLSversion;
     private int colSessionCipher;
-    private int colSessionHash;
     private int colSessionData;
     private int colSessionFlags;
 
@@ -98,6 +97,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         public LinearLayout llAnalysisExpanded;
         public LinearLayout llHTTPS;
 
+
         public TextView tvTime;
         public TextView tvDaddr;
         public TextView tvDPort;
@@ -111,16 +111,21 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         public TextView tvAppVersion;
         public TextView tvProtocol;
         public TextView tvHTTP;
-        public TextView tvTLS;
-        public TextView tvCipher;
-        public TextView tvHash;
-        public TextView tvKeyExchange;
+        public TextView tvTLSversion;
+        public TextView tvCipherSuite;
+        public TextView tvCipherProtocol;
+        public TextView tvKxAlgo;
+        public TextView tvAuthAlgo;
+        public TextView tvSymEncAlgo;
+        public TextView tvHashAlgo;
+        public TextView tvSymEncKeySize;
         public TextView tvIP;
         public TextView tvIPname;
         public TextView tvOrganization;
         public TextView tvPort;
-        public TextView tvPacketType;
-        public TextView tvPayload;
+        public TextView tvPacketsReceived;
+        public TextView tvpacketsSent;
+        public TextView tvPacketCount;
 
 
         public ViewHolder(View itemView) {
@@ -143,16 +148,21 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
             tvAppVersion = (TextView) view.findViewById(R.id.tvAppVersion);
             tvProtocol = (TextView) view.findViewById(R.id.tvProtocol);
             tvHTTP = (TextView) view.findViewById(R.id.tvHTTP);
-            tvTLS = (TextView) view.findViewById(R.id.tvTLSversion);
-            tvCipher = (TextView) view.findViewById(R.id.tvCipher);
-            tvHash = (TextView) view.findViewById(R.id.tvHash);
-            tvKeyExchange = (TextView) view.findViewById(R.id.tvKeyExchange);
+            tvTLSversion = (TextView) view.findViewById(R.id.tvTLSversion);
+            tvCipherProtocol = (TextView) view.findViewById(R.id.tvCipherProtocol);
+            tvKxAlgo = (TextView) view.findViewById(R.id.tvKxAlgo);
+            tvAuthAlgo = (TextView) view.findViewById(R.id.tvAuthAlgo);
+            tvSymEncAlgo = (TextView) view.findViewById(R.id.tvSymEncAlgo);
+            tvHashAlgo = (TextView) view.findViewById(R.id.tvHashAlgo);
+
+            tvSymEncKeySize = (TextView) view.findViewById(R.id.tvSymEncKeySize);
             tvIP = (TextView) view.findViewById(R.id.tvIP);
             tvIPname = (TextView) view.findViewById(R.id.tvIPname);
             tvOrganization = (TextView) view.findViewById(R.id.tvOrganization) ;
             tvPort = (TextView) view.findViewById(R.id.tvPort);
-            tvPacketType = (TextView) view.findViewById(R.id.tvPacketType);
-            tvPayload = (TextView) view.findViewById(R.id.tvPayload);
+            tvPacketsReceived = (TextView) view.findViewById(R.id.tvPacketsReceived);
+            tvpacketsSent = (TextView) view.findViewById(R.id.tvPacketsSent);
+            tvPacketCount = (TextView) view.findViewById(R.id.tvPacketCount);
         }
     }
 
@@ -164,7 +174,6 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         for (int i=oldCount; i < newCount; i++) {
             listExpanded.add(i, false);
         }
-
         oldCount = newCount;
     }
 
@@ -192,7 +201,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         colPacketFlags = cursorPacket.getColumnIndex("flags");
         */
 
-        // Session Packet Table
+        // Session Table
         colSessionId = cursorSession.getColumnIndex("ID");
         colSessionUid = cursorSession.getColumnIndex("uid");
         colSessionTime = cursorSession.getColumnIndex("time");
@@ -206,7 +215,6 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         colSessionData = cursorSession.getColumnIndex("data");
         colSessionTLSversion = cursorSession.getColumnIndex("TLSversion");
         colSessionCipher = cursorSession.getColumnIndex("cipher");
-        colSessionHash = cursorSession.getColumnIndex("hash");
         colSessionFlags = cursorSession.getColumnIndex("flags");
 
 
@@ -294,40 +302,11 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         int dport = (cursor.isNull(colSessionDPort) ? -1 : cursor.getInt(colSessionDPort));
         int sport = (cursor.isNull(colSessionSPort) ? -1 : cursor.getInt(colSessionSPort));
         int uid = (cursor.isNull(colSessionUid) ? -1 : cursor.getInt(colSessionUid));
+        Log.d(TAG, "UID: " + uid);
         //long sessionId = (cursor.isNull(colPacketSessionId) ? -2 : cursor.getLong(colPacketSessionId));
 
         // Show time
         viewHolder.tvTime.setText(new SimpleDateFormat("HH:mm:ss").format(time));
-
-
-        // TODO: i am ugly
-        isGood = true;
-        if(dport == 443)
-            isHTTPS = true;
-        else
-            isHTTPS = false;
-
-        if (isHTTPS)
-            viewHolder.ivLock.setImageResource(R.drawable.lock_https);
-        else
-            viewHolder.ivLock.setImageResource(R.drawable.lock_http);
-
-        if (isGood)
-            viewHolder.ivStatus.setImageResource(R.drawable.status_ok);
-        else
-            viewHolder.ivStatus.setImageResource(R.drawable.status_attention);
-
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
-            Drawable wrap_lock = DrawableCompat.wrap(viewHolder.ivLock.getDrawable());
-            Drawable wrap_status = DrawableCompat.wrap(viewHolder.ivStatus.getDrawable());
-            DrawableCompat.setTint(wrap_lock, isHTTPS == true ? colorOn : colorOff);
-            DrawableCompat.setTint(wrap_status, isGood == true ? colorOn : colorOff);
-        }
-
-
-        // Show destination port
-        viewHolder.tvDPort.setText(dport < 0 ? "" : Integer.toString(dport) + " / " + Integer.toString(sport));
-
 
         // Application icon, name & version
         ApplicationInfo info = null;
@@ -358,11 +337,46 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
             viewHolder.tvAppVersion.setText("    Version: " + version);
         }
 
+        // show lock
+        if(dport == 443 || sport == 443)
+            isHTTPS = true;
+        else
+            isHTTPS = false;
+
+        if (isHTTPS)
+            viewHolder.ivLock.setImageResource(R.drawable.lock_https);
+        else
+            viewHolder.ivLock.setImageResource(R.drawable.lock_http);
+
+        //show status icon
+        isGood = true;
+        if (isGood)
+            viewHolder.ivStatus.setImageResource(R.drawable.status_ok);
+        else
+            viewHolder.ivStatus.setImageResource(R.drawable.status_attention);
+
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
+            Drawable wrap_lock = DrawableCompat.wrap(viewHolder.ivLock.getDrawable());
+            Drawable wrap_status = DrawableCompat.wrap(viewHolder.ivStatus.getDrawable());
+            DrawableCompat.setTint(wrap_lock, isHTTPS == true ? colorOn : colorOff);
+            DrawableCompat.setTint(wrap_status, isGood == true ? colorOn : colorOff);
+        }
+
         // Show destination address
-        viewHolder.tvDaddr.setText(daddr + " / " + saddr);
+        viewHolder.tvDaddr.setText(daddr);
+
+        // Show destination port
+        viewHolder.tvDPort.setText(dport < 0 ? "" : Integer.toString(dport));
+
+        // todo: Implement
+        // Show packet counter
+        viewHolder.tvPacketCount.setText("12");
+
 
         // show details (expand)
         if(listExpanded.get((int)pos)) {
+
+            viewHolder.llAnalysisExpanded.setVisibility(View.VISIBLE);
             // FIXME: not needed?
             cursor.moveToPosition((int)pos);
 
@@ -370,74 +384,110 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
             long sessionId = (cursor.isNull(colSessionId) ? -1 : cursor.getLong(colSessionId));
             int version = (cursor.isNull(colSessionVersion) ? -1 : cursor.getInt(colSessionVersion));
             int protocol = (cursor.isNull(colSessionProtocol) ? -1 : cursor.getInt(colSessionProtocol));
-            int SSLversion = (cursor.isNull(colSessionTLSversion) ? -1 : cursor.getInt(colSessionTLSversion));
+            int TLSversion = (cursor.isNull(colSessionTLSversion) ? -1 : cursor.getInt(colSessionTLSversion));
             int cipher = (cursor.isNull(colSessionCipher) ? -1 : cursor.getInt(colSessionCipher));
 
-
+            // show Protocol
             String protocol_name = Util.getProtocolName(protocol, version, false);
             String HTTP_name = isHTTPS ? "HTTPS" : "HTTP";
-            viewHolder.llAnalysisExpanded.setVisibility(View.VISIBLE);
-
             viewHolder.tvProtocol.setText("    Transfer Protocol: " + protocol_name);
             viewHolder.tvHTTP.setText("    Application Protocol: " + HTTP_name);
 
             if(isHTTPS) {
+                //show TLS properties
+                int cipherIndex = CipherLookup.getCipherIndex(cipher);
                 viewHolder.llHTTPS.setVisibility(View.VISIBLE);
-                viewHolder.tvTLS.setText("    Version: " + SSLversion);
-                viewHolder.tvCipher.setText("    Cipher: " + cipher);
-                viewHolder.tvHash.setText("    Hash: ");
-                viewHolder.tvKeyExchange.setText("    Key Exchange:");
+                viewHolder.tvTLSversion.setText("    TLS Version: " + getTLSName(TLSversion));
+                viewHolder.tvCipherProtocol.setText("    Cipher Protocol: " + CipherLookup.getCipherProtocol(cipherIndex));
+                viewHolder.tvKxAlgo.setText("    Key Exchange Algorithm: " + CipherLookup.getKxAlgo(cipherIndex));
+                viewHolder.tvAuthAlgo.setText("    Authentication Algorithm: " + CipherLookup.getAuthAlgo(cipherIndex));
+                viewHolder.tvHashAlgo.setText("    Hash Algorithm:" + CipherLookup.getHashAlgo(cipherIndex));
+                viewHolder.tvSymEncAlgo.setText("    Symmetric Encryption Algorithm: " + CipherLookup.getSymEncAlgo(cipherIndex));
+                viewHolder.tvSymEncKeySize.setText("    Symmetric Encryption Key Size: " + CipherLookup.getSymEncKeySize(cipherIndex));
             }
             else
                 viewHolder.llHTTPS.setVisibility(View.GONE);
 
+            // show destination informations
             viewHolder.tvIP.setText("    Destination Address: " + daddr);
             viewHolder.tvIPname.setText("    Destination Name: " + dname);
-            viewHolder.tvPort.setText("    Destination Port: " + dport);
-            viewHolder.tvPacketType.setText("    Type: " + getKnownPort(dport));
-
-            viewHolder.tvPayload.setText("FAG");
-
-            // TODO: show packets
-            //Cursor packetsCursor = DatabaseHelper.getInstance(context).getSessionPackets(sessionId);
+            viewHolder.tvPort.setText("    Destination Port: " + dport + " (" + getKnownPort(dport) + ")");
 
             // Show organization
-                if (!isKnownAddress(daddr))
-                    new AsyncTask<String, Object, String>() {
-                        @Override
-                        protected void onPreExecute() {
-                            ViewCompat.setHasTransientState(viewHolder.tvOrganization, true);
-                        }
+            new AsyncTask<String, Object, String>() {
+                @Override
+                protected void onPreExecute() {
+                    ViewCompat.setHasTransientState(viewHolder.tvOrganization, true);
+                }
 
-                        @Override
-                        protected String doInBackground(String... args) {
-                            try {
-                                return Util.getOrganization(args[0]);
-                            } catch (Throwable ex) {
-                                Log.w(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
-                                return null;
-                            }
-                        }
+                @Override
+                protected String doInBackground(String... args) {
+                    try {
+                        return Util.getOrganization(args[0]);
+                    } catch (Throwable ex) {
+                        Log.w(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
+                        return null;
+                    }
+                }
 
-                        @Override
-                        protected void onPostExecute(String organization) {
-                            if (organization != null) {
-                                viewHolder.tvOrganization.setText("    Organization: " + organization);
-                            }
-                            ViewCompat.setHasTransientState(viewHolder.tvOrganization, false);
-                        }
-                    }.execute(daddr);
+                @Override
+                protected void onPostExecute(String organization) {
+                    if (organization != null) {
+                        viewHolder.tvOrganization.setText("    Organization: " + organization);
+                    }
+                    ViewCompat.setHasTransientState(viewHolder.tvOrganization, false);
+                }
+            }.execute(daddr);
         }
         else {
             viewHolder.llAnalysisExpanded.setVisibility(View.GONE);
         }
 
+        // todo: implement
+        int received = 5;
+        int sent = 3;
+        //packet counters
+        viewHolder.tvPacketsReceived.setText("    Packets Received: " + received);
+        viewHolder.tvpacketsSent.setText("    Packets Sent: " + sent);
+
+
+        // TODO: show packets
+        //Cursor packetsCursor = DatabaseHelper.getInstance(context).getSessionPackets(sessionId);
+        //viewHolder.tvPayload.setText("FAG");
+
+
+    }
+
+    public String getTLSName(int version) {
+
+        switch (version) {
+            case 0x0300:
+                return "SSL 3.0";
+            case 0x0301:
+                return "TLS 1.0";
+            case 0x0302:
+                return "TLS 1.1";
+            case 0x0303:
+                return "TLS 1.2";
+            default:
+                return "undef";
+        }
     }
 
     public boolean isKnownAddress(String addr) {
         try {
             InetAddress a = InetAddress.getByName(addr);
             if (a.equals(dns1) || a.equals(dns2) || a.equals(vpn4) || a.equals(vpn6))
+                return true;
+        } catch (UnknownHostException ignored) {
+        }
+        return false;
+    }
+
+    public boolean isIncomingPacket(String addr) {
+        try {
+            InetAddress a = InetAddress.getByName(addr);
+            if (a.equals(vpn4) || a.equals(vpn6))
                 return true;
         } catch (UnknownHostException ignored) {
         }

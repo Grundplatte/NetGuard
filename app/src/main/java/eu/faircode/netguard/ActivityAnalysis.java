@@ -20,6 +20,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.CompoundButton;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import java.net.InetAddress;
@@ -35,8 +36,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     private MenuItem menuSearch = null;
 
     private boolean live;
-    private InetAddress vpn4 = null;
-    private InetAddress vpn6 = null;
+
 
     private DatabaseHelper.SessionPacketChangedListener listener = new DatabaseHelper.SessionPacketChangedListener() {
         @Override
