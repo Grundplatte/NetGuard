@@ -1138,7 +1138,7 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
     uint16_t csum;
     char source[INET6_ADDRSTRLEN + 1];
     char dest[INET6_ADDRSTRLEN + 1];
-    char flags[10];
+    char flags[10] = {0, };
     int flen = 0;
 
     // Build packet
@@ -1288,8 +1288,8 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
         flags[flen++] = 'R';
 
     jobject objSession = create_session_packet(
-            args, cur->uid, cur->version, IPPROTO_TCP, source, sport,
-            dest, dport, sslData.version, sslData.cipher, sslData.hash, data, datalen, flags);
+            args, cur->uid, cur->version, IPPROTO_TCP, dest, sport,
+            source, dport, sslData.version, sslData.cipher, sslData.hash, data, datalen, flags);
 
     // Loggerino
     logSession(args, objSession);

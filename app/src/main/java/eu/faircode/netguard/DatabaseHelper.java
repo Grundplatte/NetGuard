@@ -153,6 +153,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Log.i(TAG, "Creating sessionPackets table");
         db.execSQL("CREATE TABLE sessionPackets (" +
                 " ID INTEGER PRIMARY KEY AUTOINCREMENT" +
+                ", uid INTEGER NULL" +
                 ", time INTEGER NOT NULL" +
                 ", version INTEGER NULL" +
                 ", protocol INTEGER NULL" +
@@ -171,6 +172,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE INDEX idx_sessionPackets_dest ON sessionPackets(daddr)");
         db.execSQL("CREATE INDEX idx_sessionPackets_dport ON sessionPackets(dport)");
         db.execSQL("CREATE INDEX idx_sessionPackets_dname ON sessionPackets(dname)");
+        db.execSQL("CREATE INDEX idx_sessionPackets_uid ON sessionPackets(uid)");
     }
 
     private void createTableSessions(SQLiteDatabase db) {
@@ -178,6 +180,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Log.i(TAG, "Creating sessions table");
         db.execSQL("CREATE TABLE sessions (" +
                 " ID INTEGER PRIMARY KEY AUTOINCREMENT" +
+                ", uid INTEGER NULL" +
                 ", time INTEGER NOT NULL" +
                 ", version INTEGER NULL" +
                 ", protocol INTEGER NULL" +
@@ -196,6 +199,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE INDEX idx_sessions_dest ON sessions(daddr)");
         db.execSQL("CREATE INDEX idx_sessions_dport ON sessions(dport)");
         db.execSQL("CREATE INDEX idx_sessions_dname ON sessions(dname)");
+        db.execSQL("CREATE INDEX idx_sessions_uid ON sessions(uid)");
     }
     private void createTableAccess(SQLiteDatabase db) {
         Log.i(TAG, "Creating access table");
@@ -542,6 +546,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             db.beginTransactionNonExclusive();
             try {
                 ContentValues cv = new ContentValues();
+
+                if (packet.uid < 0)
+                    cv.putNull("uid");
+                else
+                    cv.put("uid", packet.uid);
+
                 cv.put("time", packet.time);
 
                 cv.put("version", packet.version);
@@ -677,6 +687,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             db.beginTransactionNonExclusive();
             try {
                 ContentValues cv = new ContentValues();
+
+                if (packet.uid < 0)
+                    cv.putNull("uid");
+                else
+                    cv.put("uid", packet.uid);
+
                 cv.put("time", packet.time);
 
                 cv.put("version", packet.version);

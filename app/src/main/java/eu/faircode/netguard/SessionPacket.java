@@ -5,6 +5,7 @@ package eu.faircode.netguard;
  */
 
 public class SessionPacket {
+    public int uid;
     public long time;
     public int version;
     public int protocol;
