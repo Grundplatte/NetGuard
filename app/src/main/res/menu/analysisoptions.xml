@@ -23,6 +23,10 @@
                 android:checkable="true"
                 android:title="@string/menu_protocol_tcp" />
             <item
+                android:id="@+id/menu_protocol_dns"
+                android:checkable="true"
+                android:title="@string/menu_protocol_dns" />
+            <item
                 android:id="@+id/menu_protocol_other"
                 android:checkable="true"
                 android:title="@string/menu_protocol_other" />

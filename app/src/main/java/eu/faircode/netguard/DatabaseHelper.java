@@ -690,7 +690,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    public Cursor getSessions(boolean udp, boolean tcp, boolean other) {
+    public Cursor getSessions(boolean udp, boolean tcp, boolean dns, boolean other) {
         mLock.readLock().lock();
         try {
             SQLiteDatabase db = this.getReadableDatabase();
@@ -702,7 +702,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             if (udp)
                 query += " OR protocol = 17";
             if (tcp)
-                query += " OR protocol = 6";
+                query += " OR protocol = 6 AND dport <> 53";
+            if (dns)
+                query += " OR protocol = 6 AND dport = 53";
             if (other)
                 query += " OR (protocol <> 6 AND protocol <> 17)";
             query += ")";

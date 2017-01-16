@@ -31,6 +31,7 @@ however it is impossible to guarantee NetGuard will work correctly on every devi
 
     <string name="menu_protocol_udp" translatable="false">UDP</string>
     <string name="menu_protocol_tcp" translatable="false">TCP</string>
+    <string name="menu_protocol_dns" translatable="false">DNS</string>
     <string name="menu_protocol_other">Other</string>
     <string name="menu_traffic_allowed">Allowed</string>
     <string name="menu_traffic_blocked">Blocked</string>

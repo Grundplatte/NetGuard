@@ -88,12 +88,13 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
 
         boolean udp = prefs.getBoolean("proto_udp", true);
         boolean tcp = prefs.getBoolean("proto_tcp", true);
+        boolean dns = prefs.getBoolean("proto_dns", true);
         boolean other = prefs.getBoolean("proto_other", true);
 
         // List all incoming packets
         rvAnalysis = (RecyclerView) findViewById(R.id.rvAnalysis);
         rvAnalysis.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new AdapterAnalysis(this, DatabaseHelper.getInstance(this).getSessions(udp, tcp, other));
+        adapter = new AdapterAnalysis(this, DatabaseHelper.getInstance(this).getSessions(udp, tcp, dns, other));
 
         rvAnalysis.setAdapter(adapter);
         live = true;
@@ -184,6 +185,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
 
         menu.findItem(R.id.menu_protocol_udp).setChecked(prefs.getBoolean("proto_udp", true));
         menu.findItem(R.id.menu_protocol_tcp).setChecked(prefs.getBoolean("proto_tcp", true));
+        menu.findItem(R.id.menu_protocol_dns).setChecked(prefs.getBoolean("proto_dns", true));
         menu.findItem(R.id.menu_protocol_other).setChecked(prefs.getBoolean("proto_other", true));
 
         menu.findItem(R.id.menu_analysis_refresh).setEnabled(!menu.findItem(R.id.menu_anaysis_live).isChecked());
@@ -210,6 +212,12 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
             case R.id.menu_protocol_tcp:
                 item.setChecked(!item.isChecked());
                 prefs.edit().putBoolean("proto_tcp", item.isChecked()).apply();
+                updateAdapter();
+                return true;
+
+            case R.id.menu_protocol_dns:
+                item.setChecked(!item.isChecked());
+                prefs.edit().putBoolean("proto_dns", item.isChecked()).apply();
                 updateAdapter();
                 return true;
 
@@ -266,8 +274,9 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
             boolean udp = prefs.getBoolean("proto_udp", true);
             boolean tcp = prefs.getBoolean("proto_tcp", true);
+            boolean dns = prefs.getBoolean("proto_dns", true);
             boolean other = prefs.getBoolean("proto_other", true);
-            adapter.changeCursor(DatabaseHelper.getInstance(this).getSessions(udp, tcp, other));
+            adapter.changeCursor(DatabaseHelper.getInstance(this).getSessions(udp, tcp, dns, other));
             if (menuSearch != null && menuSearch.isActionViewExpanded()) {
                 SearchView searchView = (SearchView) MenuItemCompat.getActionView(menuSearch);
                 adapter.getFilter().filter(searchView.getQuery().toString());

@@ -533,8 +533,9 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
                     SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
                     boolean udp = prefs.getBoolean("proto_udp", true);
                     boolean tcp = prefs.getBoolean("proto_tcp", true);
+                    boolean dns = prefs.getBoolean("proto_dns", true);
                     boolean other = prefs.getBoolean("proto_other", true);
-                    cursor = DatabaseHelper.getInstance(context).getSessions(udp, tcp, other);
+                    cursor = DatabaseHelper.getInstance(context).getSessions(udp, tcp, dns, other);
                 }
                 else {
                     // set the new cursor
