@@ -814,6 +814,7 @@ void logSession(const struct arguments *args, jobject jsession) {
 
 jmethodID midInitSession = NULL;
 
+jfieldID fidSessionUid = NULL;
 jfieldID fidSessionTime = NULL;
 jfieldID fidSessionVersion = NULL;
 jfieldID fidSessionProtocol = NULL;
@@ -831,6 +832,7 @@ jfieldID fidSessionFlags = NULL;
 
 
 jobject create_session_packet(const struct arguments *args,
+                              jint uid,
                               jint version,
                               jint protocol,
                               const char *source,
@@ -864,6 +866,7 @@ jobject create_session_packet(const struct arguments *args,
 
     if (fidSessionVersion == NULL) {
         const char *string = "Ljava/lang/String;";
+        fidUid = jniGetFieldID(env, clsSessionPacket, "uid", "I");
         fidSessionTime = jniGetFieldID(env, clsSessionPacket, "time", "J");
         fidSessionVersion = jniGetFieldID(env, clsSessionPacket, "version", "I");
         fidSessionProtocol = jniGetFieldID(env, clsSessionPacket, "protocol", "I");
@@ -886,6 +889,7 @@ jobject create_session_packet(const struct arguments *args,
     jstring jData = (*env)->NewString(env, data, datalength);
     jstring jFlags = (*env)->NewStringUTF(env, flags);
 
+    (*env)->SetIntField(env, jsession, fidUid, uid);
     (*env)->SetLongField(env, jsession, fidSessionTime, t);
     (*env)->SetIntField(env, jsession, fidSessionVersion, version);
     (*env)->SetIntField(env, jsession, fidSessionProtocol, protocol);

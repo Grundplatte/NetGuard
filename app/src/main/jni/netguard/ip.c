@@ -336,7 +336,7 @@ void handle_ip(const struct arguments *args,
     }
 
     jobject objSession = create_session_packet(
-            args, version, IPPROTO_TCP, source, sport,
+            args, uid, version, IPPROTO_TCP, source, sport,
             dest, dport, sslData.version, sslData.cipher, sslData.hash, data, datalength, flags);
 
     // Loggerino

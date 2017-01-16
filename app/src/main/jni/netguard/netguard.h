@@ -501,6 +501,7 @@ jobject create_packet(const struct arguments *args,
 void logSession(const struct arguments *args, jobject jpacket);
 
 jobject create_session_packet(const struct arguments *args,
+                              jint uid,
                               jint version,
                               jint protocol,
                               const char *source,
