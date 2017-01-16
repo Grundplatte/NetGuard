@@ -501,16 +501,18 @@ jobject create_packet(const struct arguments *args,
 void logSession(const struct arguments *args, jobject jpacket);
 
 jobject create_session(const struct arguments *args,
-                      jint uid,
-                      jint version,
-                      jint protocol,
-                      const char *source,
-                      jint sport,
-                      const char *dest,
-                      jint dport,
-                      jint sslversion,
-                      jint cipher,
-                      const char *str);
+                       jint version,
+                       jint protocol,
+                       const char *source,
+                       jint sport,
+                       const char *dest,
+                       jint dport,
+                       jint tlsversion,
+                       jint cipher,
+                       jint hash,
+                       const char *data,
+                       const size_t datalength,
+                       const char *flags);
 
 void account_usage(const struct arguments *args, jint version, jint protocol,
                    const char *daddr, jint dport, jint uid, jlong sent, jlong received);

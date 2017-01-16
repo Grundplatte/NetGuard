@@ -51,30 +51,17 @@ struct sslhnd {
     __u8 length[3];
 } __packed;
 
-struct sslchello {
-    __u8 type; // 1 = client hello
-    __u8 length[3];
-    __u16 version; // TLS-Version
-    __u8 random[32];
-    __u8 sessidlength;
+struct sslData {
+    __u16 version; // 1 = client hello
+    __u8 ctype;
+    __u8 htype; // TLS-Version
+    __u16 cipher;
+    __u16 hash;
     // TODO: add other stuff
-};
-
-struct sslshello_p1 {
-    uint8_t type; // 2 = server hello
-    uint8_t length[3];
-    uint16_t version; // TLS-Version
-    uint8_t random[32];
-    uint8_t sessidlength;
-    uint8_t *sessid;
-    uint16_t ciphersuite;
-};
-
-struct sslshello_p2 {
-
 };
 
 bool is_valid_ssl_hdr(struct sslhdr * sslhdr);
 uint16_t getCipherSuite(uint8_t * data);
+void analyze_ssl(uint8_t *data, const size_t datalength, struct sslData *sslData);
 
 #endif //NETGUARD_SSL_H

@@ -1138,12 +1138,8 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
     uint16_t csum;
     char source[INET6_ADDRSTRLEN + 1];
     char dest[INET6_ADDRSTRLEN + 1];
-
-    // ssl stuff
-    int sslversion = 0;
-    int sslctype = 0;
-    int sslhtype = 0;
-    int sslcipher = 0;
+    char flags[10];
+    int flen = 0;
 
     // Build packet
     int optlen = (syn ? 4 + 3 + 1 : 0);
@@ -1158,10 +1154,8 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
         struct iphdr *ip4 = (struct iphdr *) buffer;
         tcp = (struct tcphdr *) (buffer + sizeof(struct iphdr));
         options = buffer + sizeof(struct iphdr) + sizeof(struct tcphdr);
-        if (datalen) {
-            tls = buffer + sizeof(struct iphdr) + sizeof(struct tcphdr) + optlen;
-            memcpy(tls, data, datalen);
-        }
+        if (datalen)
+            memcpy(buffer + sizeof(struct iphdr) + sizeof(struct tcphdr) + optlen, data, datalen);
 
         // Build IP4 header
         memset(ip4, 0, sizeof(struct iphdr));
@@ -1192,10 +1186,8 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
         struct ip6_hdr *ip6 = (struct ip6_hdr *) buffer;
         tcp = (struct tcphdr *) (buffer + sizeof(struct ip6_hdr));
         options = buffer + sizeof(struct ip6_hdr) + sizeof(struct tcphdr);
-        if (datalen) {
-            tls = buffer + sizeof(struct ip6_hdr) + sizeof(struct tcphdr) + optlen;
-            memcpy(tls, data, datalen);
-        }
+        if (datalen)
+            memcpy(buffer + sizeof(struct ip6_hdr) + sizeof(struct tcphdr) + optlen, data, datalen);
 
         // Build IP6 header
         memset(ip6, 0, sizeof(struct ip6_hdr));
@@ -1276,78 +1268,28 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
 
     ssize_t res = write(args->tun, buffer, len);
 
-    // TODO: Analyse tcp packet and save results in DB
-    if( dport == 443) {
-        // check if its a TLS packet
-        const uint8_t tcpoptlen = (uint8_t) ((tcp->doff - 5) * 4);
-
-        struct sslhdr *sslhdr = (struct sslhdr *) tls;
-        if(datalen > 0 && is_valid_ssl_hdr(sslhdr)) {
-            // TODO:
-            sslversion = ntohs(sslhdr->version);
-            sslctype = sslhdr->type;
-
-            switch(sslhdr->type) {
-                case CTYPE_HANDSHAKE:
-                    log_android(ANDROID_LOG_DEBUG, "TLS Handshake");
-
-                    const uint8_t *hdata = data + sizeof(struct sslhdr);
-                    struct sslhnd *handshake = (struct sslhnd *) (hdata);
-
-                    sslhtype = handshake->type;
-
-                    switch(handshake->type) {
-                        case HTYPE_CLT_HELLO:
-                            log_android(ANDROID_LOG_DEBUG, "Client Hello");
-                            sslversion = ntohs((u_int16_t)*(hdata + sizeof(struct sslhnd)));
-                            break;
-
-                        case HTYPE_SRV_HELLO:
-                            log_android(ANDROID_LOG_DEBUG, "Server Hello");
-                            sslversion = ntohs((u_int16_t)*(hdata + sizeof(struct sslhnd)));
-                            sslcipher = getCipherSuite(hdata);
-                            break;
-
-                        case HTYPE_SRV_HELLO_DONE:
-                            log_android(ANDROID_LOG_DEBUG, "Server Done");
-                            break;
-
-                        case HTYPE_CERT:
-                            log_android(ANDROID_LOG_DEBUG, "Cert");
-                            break;
-
-                        case HTYPE_SRV_KEY_EX:
-                            log_android(ANDROID_LOG_DEBUG, "Server Key Exchange");
-                            break;
-
-                        case HTYPE_CLT_KEY_EX:
-                            log_android(ANDROID_LOG_DEBUG, "Client Kex Exchange");
-                            break;
-
-                        default:
-                            log_android(ANDROID_LOG_DEBUG, "2 ERROR!");
-                    }
-                    break;
-
-                case CTYPE_CHANGE_CIPHER_SPEC:
-                    log_android(ANDROID_LOG_DEBUG, "CHANGE CIPHER SPEC");
-                    break;
-
-                case CTYPE_APPLICATION_DATA:
-                    log_android(ANDROID_LOG_DEBUG, "App Data");
-                    break;
-
-                case CTYPE_ALERT:
-                    log_android(ANDROID_LOG_DEBUG, "Alert");
-                    break;
-            }
-        }
-
+    // TODO: in log
+    struct sslData sslData;
+    if(dport == 443 && datalen > 0) {
+        analyze_ssl(data, datalen, &sslData);
     }
 
+    if (tcp->syn) {
+        syn = 1;
+        flags[flen++] = 'S';
+    }
+    if (tcp->ack)
+        flags[flen++] = 'A';
+    if (tcp->psh)
+        flags[flen++] = 'P';
+    if (tcp->fin)
+        flags[flen++] = 'F';
+    if (tcp->rst)
+        flags[flen++] = 'R';
+
     jobject objSession = create_session(
-            args, cur->uid, cur->version, IPPROTO_TCP, source, sport,
-            dest, dport, sslversion, sslcipher, "Write_TCP!");
+            args, cur->version, IPPROTO_TCP, source, sport,
+            dest, dport, sslData.version, sslData.cipher, sslData.hash, data, datalen, flags);
 
     // Loggerino
     logSession(args, objSession);

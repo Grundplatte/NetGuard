@@ -71,8 +71,6 @@ int check_tun(const struct arguments *args,
             }
         }
         else if (length > 0) {
-            // TODO: Analyse ip packet and save results in DB
-
             // Write pcap record
             if (pcap_file != NULL)
                 write_pcap_rec(buffer, (size_t) length);
@@ -134,14 +132,8 @@ void handle_ip(const struct arguments *args,
     char flags[10];
     int flen = 0;
     uint8_t *payload;
-    char * payload_str;
-    payload_str = 0;
-
-    // ssl stuff
-    int sslversion = 0;
-    int sslctype = 0;
-    int sslhtype = 0;
-    int sslcipher = 0;
+    uint8_t *data;
+    int datalength = 0;
 
     // Get protocol, addresses & payload
     uint8_t version = (*pkt) >> 4;
@@ -242,6 +234,10 @@ void handle_ip(const struct arguments *args,
         sport = ntohs(icmp->icmp_id);
         dport = ntohs(icmp->icmp_id);
 
+        datalength = length - (payload - pkt) - sizeof(struct icmp);
+        if(datalength > 0)
+            data = payload + sizeof(struct icmp);
+
     } else if (protocol == IPPROTO_UDP) {
         if (length - (payload - pkt) < sizeof(struct udphdr)) {
             log_android(ANDROID_LOG_WARN, "UDP packet too short");
@@ -252,6 +248,10 @@ void handle_ip(const struct arguments *args,
 
         sport = ntohs(udp->source);
         dport = ntohs(udp->dest);
+
+        datalength = length - (payload - pkt) - sizeof(struct udphdr);
+        if(datalength > 0)
+            data = payload + sizeof(struct udphdr);
 
         // TODO checksum (IPv6)
     }
@@ -278,6 +278,11 @@ void handle_ip(const struct arguments *args,
             flags[flen++] = 'F';
         if (tcp->rst)
             flags[flen++] = 'R';
+
+        const uint8_t tcpoptlen = (uint8_t) ((tcp->doff - 5) * 4);
+        datalength = length - (payload - pkt) - (sizeof(struct tcphdr) + tcpoptlen);
+        if(datalength > 0)
+            data = payload + sizeof(struct tcphdr) + tcpoptlen;
     }
     else if (protocol != IPPROTO_HOPOPTS && protocol != IPPROTO_IGMP && protocol != IPPROTO_ESP)
         report_error(args, 1, "Unknown protocol %d", protocol);
@@ -324,11 +329,18 @@ void handle_ip(const struct arguments *args,
             redirect = NULL;
     }
 
-    // free data
-    if(payload_str != 0) {
-        free(payload_str);
-        payload_str = 0;
+    // TODO: out log
+    struct sslData sslData;
+    if(protocol == IPPROTO_TCP && dport == 443 && datalength > 0) {
+        analyze_ssl(data, datalength, &sslData);
     }
+
+    jobject objSession = create_session(
+            args, version, IPPROTO_TCP, source, sport,
+            dest, dport, sslData.version, sslData.cipher, sslData.hash, data, datalength, flags);
+
+    // Loggerino
+    logSession(args, objSession);
 
     // Handle allowed traffic
     if (allowed) {

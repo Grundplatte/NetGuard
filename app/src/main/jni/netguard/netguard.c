@@ -814,7 +814,7 @@ void logSession(const struct arguments *args, jobject jsession) {
 
 jmethodID midInitSession = NULL;
 
-jfieldID fidSessionUid = NULL;
+jfieldID fidSessionTime = NULL;
 jfieldID fidSessionVersion = NULL;
 jfieldID fidSessionProtocol = NULL;
 jfieldID fidSessionSaddr = NULL;
@@ -823,13 +823,14 @@ jfieldID fidSessionDaddr = NULL;
 jfieldID fidSessionDport = NULL;
 
 // ssl stuff
-jfieldID fidTLSVersion = NULL;
-jfieldID fidCipher = NULL;
-jfieldID fidStr = NULL;
+jfieldID fidSessionTLSVersion = NULL;
+jfieldID fidSessionCipher = NULL;
+jfieldID fidSessionHash = NULL;
+jfieldID fidSessionData = NULL;
+jfieldID fidSessionFlags = NULL;
 
 
 jobject create_session(const struct arguments *args,
-                       jint uid,
                        jint version,
                        jint protocol,
                        const char *source,
@@ -838,7 +839,10 @@ jobject create_session(const struct arguments *args,
                        jint dport,
                        jint tlsversion,
                        jint cipher,
-                       const char *str) {
+                       jint hash,
+                       const char *data,
+                       const size_t datalength,
+                       const char *flags) {
     JNIEnv *env = args->env;
 
 #ifdef PROFILE_JNI
@@ -860,36 +864,45 @@ jobject create_session(const struct arguments *args,
 
     if (fidSessionVersion == NULL) {
         const char *string = "Ljava/lang/String;";
-        fidSessionUid = jniGetFieldID(env, clsSession, "uid", "I");
+        fidSessionTime = jniGetFieldID(env, clsPacket, "time", "J");
         fidSessionVersion = jniGetFieldID(env, clsSession, "version", "I");
         fidSessionProtocol = jniGetFieldID(env, clsSession, "protocol", "I");
         fidSessionSaddr = jniGetFieldID(env, clsSession, "saddr", string);
         fidSessionSport = jniGetFieldID(env, clsSession, "sport", "I");
         fidSessionDaddr = jniGetFieldID(env, clsSession, "daddr", string);
         fidSessionDport = jniGetFieldID(env, clsSession, "dport", "I");
-        fidTLSVersion = jniGetFieldID(env, clsSession, "TLSversion", "I");
-        fidCipher = jniGetFieldID(env, clsSession, "cipher", "I");
-        fidStr = jniGetFieldID(env, clsSession, "str", string);
+        fidSessionTLSVersion = jniGetFieldID(env, clsSession, "TLSversion", "I");
+        fidSessionCipher = jniGetFieldID(env, clsSession, "cipher", "I");
+        fidSessionCipher = jniGetFieldID(env, clsSession, "hash", "I");
+        fidSessionData = jniGetFieldID(env, clsSession, "data", string);
+        fidSessionFlags = jniGetFieldID(env, clsSession, "flags", string);
     }
 
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    jlong t = tv.tv_sec * 1000LL + tv.tv_usec / 1000;
     jstring jsource = (*env)->NewStringUTF(env, source);
     jstring jdest = (*env)->NewStringUTF(env, dest);
-    jstring jStr = (*env)->NewStringUTF(env, str);
+    jstring jData = (*env)->NewString(env, data, datalength);
+    jstring jFlags = (*env)->NewStringUTF(env, flags);
 
-    (*env)->SetIntField(env, jsession, fidSessionUid, uid);
+    (*env)->SetLongField(env, jsession, fidSessionTime, t);
     (*env)->SetIntField(env, jsession, fidSessionVersion, version);
     (*env)->SetIntField(env, jsession, fidSessionProtocol, protocol);
     (*env)->SetObjectField(env, jsession, fidSessionSaddr, jsource);
     (*env)->SetIntField(env, jsession, fidSessionSport, sport);
     (*env)->SetObjectField(env, jsession, fidSessionDaddr, jdest);
     (*env)->SetIntField(env, jsession, fidSessionDport, dport);
-    (*env)->SetIntField(env, jsession, fidTLSVersion, tlsversion);
-    (*env)->SetIntField(env, jsession, fidCipher, cipher);
-    (*env)->SetObjectField(env, jsession, fidStr, jStr);
+    (*env)->SetIntField(env, jsession, fidSessionTLSVersion, tlsversion);
+    (*env)->SetIntField(env, jsession, fidSessionCipher, cipher);
+    (*env)->SetIntField(env, jsession, fidSessionHash, hash);
+    (*env)->SetObjectField(env, jsession, fidSessionData, jData);
+    (*env)->SetObjectField(env, jsession, fidSessionFlags, jFlags);
 
     (*env)->DeleteLocalRef(env, jdest);
     (*env)->DeleteLocalRef(env, jsource);
-    (*env)->DeleteLocalRef(env, jStr);
+    (*env)->DeleteLocalRef(env, jData);
+    (*env)->DeleteLocalRef(env, jFlags);
     // Caller needs to delete reference to packet
 
 #ifdef PROFILE_JNI
