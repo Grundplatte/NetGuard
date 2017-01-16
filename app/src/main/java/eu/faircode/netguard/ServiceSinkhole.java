@@ -161,7 +161,7 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
     private static final int MSG_STATS_UPDATE = 3;
     private static final int MSG_PACKET = 4;
     private static final int MSG_USAGE = 5;
-    private static final int MSG_SESSION = 6;
+    private static final int MSG_SESSION_PACKET = 6;
 
     private enum State {none, waiting, enforcing, stats}
 
@@ -522,9 +522,9 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
         }
 
         private void householding(Intent intent) {
-            // Keep log records for three days
+            // Keep log % session records for three days
             DatabaseHelper.getInstance(ServiceSinkhole.this).cleanupLog(new Date().getTime() - 3 * 24 * 3600 * 1000L);
-
+           // DatabaseHelper.getInstance(ServiceSinkhole.this).cleanupSessions(new Date().getTime() - 3 * 24 * 3600 * 1000L); todo: fix
             // Clear expired DNS records
             DatabaseHelper.getInstance(ServiceSinkhole.this).cleanupDns();
 
@@ -599,7 +599,7 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
         @Override
         public void handleMessage(Message msg) {
             try {
-                if (powersaving && (msg.what == MSG_PACKET || msg.what == MSG_SESSION || msg.what == MSG_USAGE))
+                if (powersaving && (msg.what == MSG_PACKET || msg.what == MSG_SESSION_PACKET || msg.what == MSG_USAGE))
                     return;
 
                 switch (msg.what) {
@@ -607,8 +607,8 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                         log((Packet) msg.obj, msg.arg1, msg.arg2 > 0);
                         break;
 
-                    case MSG_SESSION:
-                        log_Session((Session) msg.obj);
+                    case MSG_SESSION_PACKET:
+                        log_SessionPacket((SessionPacket) msg.obj);
                         break;
 
                     case MSG_USAGE:
@@ -654,7 +654,7 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
             }
         }
 
-        private void log_Session(Session session) {
+        private void log_SessionPacket(SessionPacket packet) {
             // Get settings
             SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ServiceSinkhole.this);
             boolean analysis = prefs.getBoolean("analysis", false);
@@ -662,11 +662,12 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
             DatabaseHelper dh = DatabaseHelper.getInstance(ServiceSinkhole.this);
 
             // Get real name
-            String dname = dh.getQName(session.daddr);
+            String dname = dh.getQName(packet.daddr);
 
             // Traffic sessions
             if (analysis)
-                dh.insertSession(session, dname);
+                dh.insertSessionPacket(packet, dname);
+
         }
 
         private void usage(Usage usage) {
@@ -1490,10 +1491,10 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
     }
 
     // Called from native code
-    private void logSession(Session session) {
+    private void logSessionPacket(SessionPacket packet) {
         Message msg = logHandler.obtainMessage();
-        msg.obj = session;
-        msg.what = MSG_SESSION;
+        msg.obj = packet;
+        msg.what = MSG_SESSION_PACKET;
         logHandler.sendMessage(msg);
     }
 

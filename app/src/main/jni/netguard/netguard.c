@@ -864,7 +864,7 @@ jobject create_session_packet(const struct arguments *args,
 
     if (fidSessionVersion == NULL) {
         const char *string = "Ljava/lang/String;";
-        fidSessionTime = jniGetFieldID(env, clsPacket, "time", "J");
+        fidSessionTime = jniGetFieldID(env, clsSessionPacket, "time", "J");
         fidSessionVersion = jniGetFieldID(env, clsSessionPacket, "version", "I");
         fidSessionProtocol = jniGetFieldID(env, clsSessionPacket, "protocol", "I");
         fidSessionSaddr = jniGetFieldID(env, clsSessionPacket, "saddr", string);
@@ -873,7 +873,7 @@ jobject create_session_packet(const struct arguments *args,
         fidSessionDport = jniGetFieldID(env, clsSessionPacket, "dport", "I");
         fidSessionTLSVersion = jniGetFieldID(env, clsSessionPacket, "TLSversion", "I");
         fidSessionCipher = jniGetFieldID(env, clsSessionPacket, "cipher", "I");
-        fidSessionCipher = jniGetFieldID(env, clsSessionPacket, "hash", "I");
+        fidSessionHash = jniGetFieldID(env, clsSessionPacket, "hash", "I");
         fidSessionData = jniGetFieldID(env, clsSessionPacket, "data", string);
         fidSessionFlags = jniGetFieldID(env, clsSessionPacket, "flags", string);
     }

@@ -4,8 +4,8 @@ package eu.faircode.netguard;
  * Created by Rainer on 15.01.2017.
  */
 
-public class Session {
-    public int uid;
+public class SessionPacket {
+    public long time;
     public int version;
     public int protocol;
     public String saddr;
@@ -14,9 +14,11 @@ public class Session {
     public int dport;
     public int TLSversion;
     public int cipher;
-    public String str;
+    public int hash;
+    public String data;
+    public String flags;
 
-    public Session() {
+    public SessionPacket() {
 
     }
 }

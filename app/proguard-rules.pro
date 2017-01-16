@@ -38,7 +38,7 @@
     void nativeExit(java.lang.String);
     void nativeError(int, java.lang.String);
     void logPacket(eu.faircode.netguard.Packet);
-    void logSession(eu.faircode.netguard.Session);
+    void logSessionPacket(eu.faircode.netguard.SessionPacket);
     void dnsResolved(eu.faircode.netguard.ResourceRecord);
     boolean isDomainBlocked(java.lang.String);
     eu.faircode.netguard.Allowed isAddressAllowed(eu.faircode.netguard.Packet);

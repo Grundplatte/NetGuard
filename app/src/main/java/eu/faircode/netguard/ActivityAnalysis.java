@@ -38,7 +38,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     private InetAddress vpn4 = null;
     private InetAddress vpn6 = null;
 
-    private DatabaseHelper.SessionChangedListener listener = new DatabaseHelper.SessionChangedListener() {
+    private DatabaseHelper.SessionPacketChangedListener listener = new DatabaseHelper.SessionPacketChangedListener() {
         @Override
         public void onChanged() {
             runOnUiThread(new Runnable() {
@@ -93,7 +93,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
         // List all incoming packets
         rvAnalysis = (RecyclerView) findViewById(R.id.rvAnalysis);
         rvAnalysis.setLayoutManager(new LinearLayoutManager(this));
-        adapter = new AdapterAnalysis(this, DatabaseHelper.getInstance(this).getSessions(udp, tcp, other));
+        adapter = new AdapterAnalysis(this, DatabaseHelper.getInstance(this).getSessionPackets(udp, tcp, other));
 
         rvAnalysis.setAdapter(adapter);
         live = true;
@@ -103,7 +103,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     protected void onResume() {
         super.onResume();
         if (live) {
-            DatabaseHelper.getInstance(this).addSessionChangedListener(listener);
+            DatabaseHelper.getInstance(this).addSessionPacketChangedListener(listener);
             updateAdapter();
         }
     }
@@ -112,7 +112,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
     protected void onPause() {
         super.onPause();
         if (live)
-            DatabaseHelper.getInstance(this).removeSessionChangedListener(listener);
+            DatabaseHelper.getInstance(this).removeSessionPacketChangedListener(listener);
     }
 
     @Override
@@ -223,10 +223,10 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
                 item.setChecked(!item.isChecked());
                 live = item.isChecked();
                 if (live) {
-                    DatabaseHelper.getInstance(this).addSessionChangedListener(listener);
+                    DatabaseHelper.getInstance(this).addSessionPacketChangedListener(listener);
                     updateAdapter();
                 } else
-                    DatabaseHelper.getInstance(this).removeSessionChangedListener(listener);
+                    DatabaseHelper.getInstance(this).removeSessionPacketChangedListener(listener);
                 return true;
 
             case R.id.menu_analysis_refresh:
@@ -243,7 +243,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
                 new AsyncTask<Object, Object, Object>() {
                     @Override
                     protected Object doInBackground(Object... objects) {
-                        DatabaseHelper.getInstance(ActivityAnalysis.this).clearSessions();
+                        DatabaseHelper.getInstance(ActivityAnalysis.this).clearSessionPackets();
                         return null;
                     }
 
@@ -266,7 +266,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
             boolean udp = prefs.getBoolean("proto_udp", true);
             boolean tcp = prefs.getBoolean("proto_tcp", true);
             boolean other = prefs.getBoolean("proto_other", true);
-            adapter.changeCursor(DatabaseHelper.getInstance(this).getSessions(udp, tcp, other));
+            adapter.changeCursor(DatabaseHelper.getInstance(this).getSessionPackets(udp, tcp, other));
             if (menuSearch != null && menuSearch.isActionViewExpanded()) {
                 SearchView searchView = (SearchView) MenuItemCompat.getActionView(menuSearch);
                 adapter.getFilter().filter(searchView.getQuery().toString());

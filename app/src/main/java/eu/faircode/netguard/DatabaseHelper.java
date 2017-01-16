@@ -45,6 +45,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     private static boolean once = true;
     private static List<LogChangedListener> logChangedListeners = new ArrayList<>();
+    private static List<SessionPacketChangedListener> sessionPacketChangedListeners = new ArrayList<>();
     private static List<SessionChangedListener> sessionChangedListeners = new ArrayList<>();
     private static List<AccessChangedListener> accessChangedListeners = new ArrayList<>();
     private static List<ForwardChangedListener> forwardChangedListeners = new ArrayList<>();
@@ -55,7 +56,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private final static int MSG_LOG = 1;
     private final static int MSG_ACCESS = 2;
     private final static int MSG_FORWARD = 3;
-    private final static int MSG_SESSION = 4;
+    private final static int MSG_SESSION_PACKET = 4;
+    private final static int MSG_SESSION = 5;
 
     private ReentrantReadWriteLock mLock = new ReentrantReadWriteLock(true);
 
@@ -107,6 +109,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public void onCreate(SQLiteDatabase db) {
         Log.i(TAG, "Creating database " + DB_NAME + " version " + DB_VERSION);
         createTableLog(db);
+        createTableSessionPackets(db);
         createTableSessions(db);
         createTableAccess(db);
         createTableDns(db);
@@ -145,12 +148,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE INDEX idx_log_uid ON log(uid)");
     }
 
-    private void createTableSessions(SQLiteDatabase db) {
+    private void createTableSessionPackets(SQLiteDatabase db) {
 
-        Log.i(TAG, "Creating sessions table");
-        db.execSQL("CREATE TABLE sessions (" +
+        Log.i(TAG, "Creating sessionPackets table");
+        db.execSQL("CREATE TABLE sessionPackets (" +
                 " ID INTEGER PRIMARY KEY AUTOINCREMENT" +
-                ", uid INTEGER NULL" +
+                ", time INTEGER NOT NULL" +
                 ", version INTEGER NULL" +
                 ", protocol INTEGER NULL" +
                 ", saddr TEXT" +
@@ -160,9 +163,36 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 ", dname TEXT NULL" +
                 ", TLSversion INTEGER NULL" +
                 ", cipher INTEGER NULL" +
-                ", str TEXT" +
+                ", hash INTEGER NULL" +
+                ", data TEXT" +
+                ", flags TEXT" +
                 ");");
-        db.execSQL("CREATE INDEX idx_sessions_uid ON sessions(uid)");
+        db.execSQL("CREATE INDEX idx_sessionPackets_time ON sessionPackets(time)");
+        db.execSQL("CREATE INDEX idx_sessionPackets_dest ON sessionPackets(daddr)");
+        db.execSQL("CREATE INDEX idx_sessionPackets_dport ON sessionPackets(dport)");
+        db.execSQL("CREATE INDEX idx_sessionPackets_dname ON sessionPackets(dname)");
+    }
+
+    private void createTableSessions(SQLiteDatabase db) {
+
+        Log.i(TAG, "Creating sessions table");
+        db.execSQL("CREATE TABLE sessions (" +
+                " ID INTEGER PRIMARY KEY AUTOINCREMENT" +
+                ", time INTEGER NOT NULL" +
+                ", version INTEGER NULL" +
+                ", protocol INTEGER NULL" +
+                ", saddr TEXT" +
+                ", sport INTEGER NULL" +
+                ", daddr TEXT" +
+                ", dport INTEGER NULL" +
+                ", dname TEXT NULL" +
+                ", TLSversion INTEGER NULL" +
+                ", cipher INTEGER NULL" +
+                ", hash INTEGER NULL" +
+                ", data TEXT" +
+                ", flags TEXT" +
+                ");");
+        db.execSQL("CREATE INDEX idx_sessions_time ON sessions(time)");
         db.execSQL("CREATE INDEX idx_sessions_dest ON sessions(daddr)");
         db.execSQL("CREATE INDEX idx_sessions_dport ON sessions(dport)");
         db.execSQL("CREATE INDEX idx_sessions_dname ON sessions(dname)");
@@ -339,6 +369,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 oldVersion = 20;
             }
             if (oldVersion < 23) {
+                createTableSessionPackets(db);
                 createTableSessions(db);
                 oldVersion = 23;
             }
@@ -504,47 +535,48 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // Sessions
-    public void insertSession(Session session, String dname) {
+    public void insertSession(SessionPacket packet, String dname) {
         mLock.writeLock().lock();
         try {
             SQLiteDatabase db = this.getWritableDatabase();
             db.beginTransactionNonExclusive();
             try {
                 ContentValues cv = new ContentValues();
-                if (session.uid < 0)
-                    cv.putNull("uid");
-                else
-                    cv.put("uid", session.uid);
+                cv.put("time", packet.time);
 
-                cv.put("version", session.version);
+                cv.put("version", packet.version);
 
-                if (session.protocol < 0)
+                if (packet.protocol < 0)
                     cv.putNull("protocol");
                 else
-                    cv.put("protocol", session.protocol);
+                    cv.put("protocol", packet.protocol);
 
-                cv.put("saddr", session.saddr);
+                cv.put("saddr", packet.saddr);
 
-                if (session.sport < 0)
+                if (packet.sport < 0)
                     cv.putNull("sport");
                 else
-                    cv.put("sport", session.sport);
+                    cv.put("sport", packet.sport);
 
-                cv.put("daddr", session.daddr);
+                cv.put("daddr", packet.daddr);
 
-                if (session.dport < 0)
+                if (packet.dport < 0)
                     cv.putNull("dport");
                 else
-                    cv.put("dport", session.dport);
+                    cv.put("dport", packet.dport);
 
                 if (dname == null)
                     cv.putNull("dname");
                 else
                     cv.put("dname", dname);
 
-                cv.put("TLSversion", session.TLSversion);
-                cv.put("cipher", session.cipher);
-                cv.put("str", session.str);
+                cv.put("TLSversion", packet.TLSversion);
+                cv.put("cipher", packet.cipher);
+                cv.put("hash", packet.hash);
+
+                cv.put("data", packet.data);
+
+                cv.put("flags", packet.flags);
 
                 if (db.insert("sessions", null, cv) == -1)
                     Log.e(TAG, "Insert sessions failed");
@@ -556,7 +588,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } finally {
             mLock.writeLock().unlock();
         }
-        notifyLogChanged();
+        notifySessionChanged();
     }
 
     public void clearSessions() {
@@ -576,7 +608,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } finally {
             mLock.writeLock().unlock();
         }
-        notifyLogChanged();
+        notifySessionChanged();
     }
 
     public void cleanupSessions(long time) {
@@ -615,9 +647,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 query += " OR protocol = 6";
             if (other)
                 query += " OR (protocol <> 6 AND protocol <> 17)";
-            query += ") AND (0 = 1";
             query += ")";
-            query += " ORDER BY uid DESC";
+            query += " ORDER BY time DESC";
             return db.rawQuery(query, new String[]{});
         } finally {
             mLock.readLock().unlock();
@@ -630,7 +661,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             SQLiteDatabase db = this.getReadableDatabase();
             String query = "SELECT ID AS _id, *";
             query += " FROM sessions";
-            query += " WHERE daddr LIKE ? OR dport = ? OR uid = ?";
+            query += " WHERE daddr LIKE ? OR dname LIKE ? OR dport = ? OR uid = ?";
             query += " ORDER BY time DESC";
             return db.rawQuery(query, new String[]{"%" + find + "%", "%" + find + "%", find, find});
         } finally {
@@ -638,6 +669,140 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
+    // SessionPackets
+    public void insertSessionPacket(SessionPacket packet, String dname) {
+        mLock.writeLock().lock();
+        try {
+            SQLiteDatabase db = this.getWritableDatabase();
+            db.beginTransactionNonExclusive();
+            try {
+                ContentValues cv = new ContentValues();
+                cv.put("time", packet.time);
+
+                cv.put("version", packet.version);
+
+                if (packet.protocol < 0)
+                    cv.putNull("protocol");
+                else
+                    cv.put("protocol", packet.protocol);
+
+                cv.put("saddr", packet.saddr);
+
+                if (packet.sport < 0)
+                    cv.putNull("sport");
+                else
+                    cv.put("sport", packet.sport);
+
+                cv.put("daddr", packet.daddr);
+
+                if (packet.dport < 0)
+                    cv.putNull("dport");
+                else
+                    cv.put("dport", packet.dport);
+
+                if (dname == null)
+                    cv.putNull("dname");
+                else
+                    cv.put("dname", dname);
+
+                cv.put("TLSversion", packet.TLSversion);
+                cv.put("cipher", packet.cipher);
+                cv.put("hash", packet.hash);
+
+                cv.put("data", packet.data);
+
+                cv.put("flags", packet.flags);
+
+                if (db.insert("sessionPackets", null, cv) == -1)
+                    Log.e(TAG, "Insert sessionPackets failed");
+
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        } finally {
+            mLock.writeLock().unlock();
+        }
+        notifySessionPacketChanged();
+    }
+
+    public void clearSessionPackets() {
+        mLock.writeLock().lock();
+        try {
+            SQLiteDatabase db = this.getWritableDatabase();
+            db.beginTransactionNonExclusive();
+            try {
+                db.delete("sessionPackets", null, new String[]{});
+
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+
+            db.execSQL("VACUUM");
+        } finally {
+            mLock.writeLock().unlock();
+        }
+        notifySessionPacketChanged();
+    }
+
+    public void cleanupSessionPackets(long time) {
+        mLock.writeLock().lock();
+        try {
+            SQLiteDatabase db = this.getWritableDatabase();
+            db.beginTransactionNonExclusive();
+            try {
+                // There an index on time
+                int rows = db.delete("sessionPackets", "time < ?", new String[]{Long.toString(time)});
+                Log.i(TAG, "Cleanup sessionPackets" +
+                        " before=" + SimpleDateFormat.getDateTimeInstance().format(new Date(time)) +
+                        " rows=" + rows);
+
+                db.setTransactionSuccessful();
+            } finally {
+                db.endTransaction();
+            }
+        } finally {
+            mLock.writeLock().unlock();
+        }
+    }
+
+    public Cursor getSessionPackets(boolean udp, boolean tcp, boolean other) {
+        mLock.readLock().lock();
+        try {
+            SQLiteDatabase db = this.getReadableDatabase();
+            // There is an index on time
+            // There is no index on protocol/allowed for write performance
+            String query = "SELECT ID AS _id, *";
+            query += " FROM sessionPackets";
+            query += " WHERE (0 = 1";
+            if (udp)
+                query += " OR protocol = 17";
+            if (tcp)
+                query += " OR protocol = 6";
+            if (other)
+                query += " OR (protocol <> 6 AND protocol <> 17)";
+            query += ")";
+            query += " ORDER BY time DESC";
+            return db.rawQuery(query, new String[]{});
+        } finally {
+            mLock.readLock().unlock();
+        }
+    }
+
+    public Cursor searchSessionPackets(String find) {
+        mLock.readLock().lock();
+        try {
+            SQLiteDatabase db = this.getReadableDatabase();
+            String query = "SELECT ID AS _id, *";
+            query += " FROM sessionPackets";
+            query += " WHERE daddr LIKE ? OR dname LIKE ? OR dport = ? OR uid = ?";
+            query += " ORDER BY time DESC";
+            return db.rawQuery(query, new String[]{"%" + find + "%", "%" + find + "%", find, find});
+        } finally {
+            mLock.readLock().unlock();
+        }
+    }
 
     // Access
 
@@ -1116,12 +1281,12 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         logChangedListeners.remove(listener);
     }
 
-    public void addSessionChangedListener(SessionChangedListener listener) {
-        sessionChangedListeners.add(listener);
+    public void addSessionPacketChangedListener(SessionPacketChangedListener listener) {
+        sessionPacketChangedListeners.add(listener);
     }
 
-    public void removeSessionChangedListener(SessionChangedListener listener) {
-        sessionChangedListeners.remove(listener);
+    public void removeSessionPacketChangedListener(SessionPacketChangedListener listener) {
+        sessionPacketChangedListeners.remove(listener);
     }
 
     public void addAccessChangedListener(AccessChangedListener listener) {
@@ -1146,9 +1311,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         handler.sendMessage(msg);
     }
 
+    private void notifySessionPacketChanged() {
+        Message msg = handler.obtainMessage();
+        msg.what = MSG_SESSION_PACKET;
+        handler.sendMessage(msg);
+    }
+
     private void notifySessionChanged() {
         Message msg = handler.obtainMessage();
-        msg.what = MSG_LOG;
+        msg.what = MSG_SESSION;
         handler.sendMessage(msg);
     }
 
@@ -1190,6 +1361,14 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
                 }
 
+        } else if (msg.what == MSG_SESSION_PACKET) {
+            for (SessionPacketChangedListener listener : sessionPacketChangedListeners)
+                try {
+                    listener.onChanged();
+                } catch (Throwable ex) {
+                    Log.e(TAG, ex.toString() + "\n" + Log.getStackTraceString(ex));
+                }
+
         } else if (msg.what == MSG_SESSION) {
             for (SessionChangedListener listener : sessionChangedListeners)
                 try {
@@ -1209,6 +1388,10 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     public interface LogChangedListener {
+        void onChanged();
+    }
+
+    public interface SessionPacketChangedListener {
         void onChanged();
     }
 
