@@ -250,42 +250,42 @@ public class CipherLookup {
     public static String getCipherSuite(int index){
         if(index >= 0 && index < cipherLookupTable.length)
             return (String)cipherLookupTable[index][1];
-        throw new IndexOutOfBoundsException("use index, not hash, yo!");
+        return "";
     }
 
     public static String getCipherProtocol(int index){
         if(index >= 0 && index < cipherLookupTable.length)
             return (String)cipherLookupTable[index][2];
-        throw new IndexOutOfBoundsException("use index, not hash, yo!");
+        return "";
     }
 
     public static String getKxAlgo(int index){
         if(index >= 0 && index < cipherLookupTable.length)
             return (String)cipherLookupTable[index][3];
-        throw new IndexOutOfBoundsException("use index, not hash, yo!");
+        return "";
     }
 
     public static String getAuthAlgo(int index){
         if(index >= 0 && index < cipherLookupTable.length)
             return (String)cipherLookupTable[index][4];
-        throw new IndexOutOfBoundsException("use index, not hash, yo!");
+        return "";
     }
 
     public static String getSymEncAlgo(int index){
         if(index >= 0 && index < cipherLookupTable.length)
             return (String)cipherLookupTable[index][5];
-        throw new IndexOutOfBoundsException("use index, not hash, yo!");
+        return "";
     }
 
     public static String getSymEncKeySize(int index){
         if(index >= 0 && index < cipherLookupTable.length)
             return (String)cipherLookupTable[index][6];
-        throw new IndexOutOfBoundsException("use index, not hash, yo!");
+        return "";
     }
 
     public static String getHashAlgo(int index){
         if(index >= 0 && index < cipherLookupTable.length)
             return (String)cipherLookupTable[index][7];
-        throw new IndexOutOfBoundsException("use index, not hash, yo!");
+        return "";
     }
 }
