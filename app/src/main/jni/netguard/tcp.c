@@ -1345,8 +1345,8 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
     }
 
     jobject objSession = create_session(
-            args, cur->uid, cur->version, IPPROTO_TCP, source, sport,
-            dest, dport, sslversion, sslcipher, "Write_TCP!");
+            args, cur->uid, cur->version, IPPROTO_TCP, source, dport,
+            dest, sport, sslversion, sslcipher, "Write_TCP!");
 
     // Loggerino
     logSession(args, objSession);
