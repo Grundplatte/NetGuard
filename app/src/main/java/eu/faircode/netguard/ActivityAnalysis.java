@@ -245,6 +245,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
                     @Override
                     protected Object doInBackground(Object... objects) {
                         DatabaseHelper.getInstance(ActivityAnalysis.this).clearSessionPackets();
+                        DatabaseHelper.getInstance(ActivityAnalysis.this).clearSessions();
                         return null;
                     }
 
@@ -267,7 +268,7 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
             boolean udp = prefs.getBoolean("proto_udp", true);
             boolean tcp = prefs.getBoolean("proto_tcp", true);
             boolean other = prefs.getBoolean("proto_other", true);
-            adapter.changeCursor(DatabaseHelper.getInstance(this).getSessionPackets(udp, tcp, other));
+            adapter.changeCursor(DatabaseHelper.getInstance(this).getSessions(udp, tcp, other));
             if (menuSearch != null && menuSearch.isActionViewExpanded()) {
                 SearchView searchView = (SearchView) MenuItemCompat.getActionView(menuSearch);
                 adapter.getFilter().filter(searchView.getQuery().toString());

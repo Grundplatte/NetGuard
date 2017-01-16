@@ -524,7 +524,8 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
         private void householding(Intent intent) {
             // Keep log % session records for three days
             DatabaseHelper.getInstance(ServiceSinkhole.this).cleanupLog(new Date().getTime() - 3 * 24 * 3600 * 1000L);
-           // DatabaseHelper.getInstance(ServiceSinkhole.this).cleanupSessions(new Date().getTime() - 3 * 24 * 3600 * 1000L); todo: fix
+            DatabaseHelper.getInstance(ServiceSinkhole.this).cleanupSessionPackets(new Date().getTime() - 3 * 24 * 3600 * 1000L);
+            DatabaseHelper.getInstance(ServiceSinkhole.this).cleanupSessions(new Date().getTime() - 3 * 24 * 3600 * 1000L);
             // Clear expired DNS records
             DatabaseHelper.getInstance(ServiceSinkhole.this).cleanupDns();
 
@@ -661,12 +662,20 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
 
             DatabaseHelper dh = DatabaseHelper.getInstance(ServiceSinkhole.this);
 
-            // Get real name
-            String dname = dh.getQName(packet.daddr);
+
+
 
             // Traffic sessions
-            if (analysis)
-                dh.insertSessionPacket(packet, dname);
+            if (analysis) {
+                long sessionId = -1;
+                // Get real name
+                String dname = dh.getQName(packet.daddr);
+                sessionId = dh.getExistingSessionId(packet);
+                if(sessionId < 0) {
+                    sessionId = dh.insertSession(packet, dname);
+                }
+                dh.insertSessionPacket(packet, dname, sessionId);
+            }
 
         }
 

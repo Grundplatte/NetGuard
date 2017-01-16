@@ -153,6 +153,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         Log.i(TAG, "Creating sessionPackets table");
         db.execSQL("CREATE TABLE sessionPackets (" +
                 " ID INTEGER PRIMARY KEY AUTOINCREMENT" +
+                ", sessionId INTEGER NULL" +
                 ", uid INTEGER NULL" +
                 ", time INTEGER NOT NULL" +
                 ", version INTEGER NULL" +
@@ -539,8 +540,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // Sessions
-    public void insertSession(SessionPacket packet, String dname) {
+    public long insertSession(SessionPacket packet, String dname) {
         mLock.writeLock().lock();
+        long sessionId = -1;
         try {
             SQLiteDatabase db = this.getWritableDatabase();
             db.beginTransactionNonExclusive();
@@ -588,7 +590,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
                 cv.put("flags", packet.flags);
 
-                if (db.insert("sessions", null, cv) == -1)
+                sessionId = db.insert("sessions", null, cv);
+                if (sessionId == -1)
                     Log.e(TAG, "Insert sessions failed");
 
                 db.setTransactionSuccessful();
@@ -599,6 +602,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             mLock.writeLock().unlock();
         }
         notifySessionChanged();
+        return sessionId;
     }
 
     public void clearSessions() {
@@ -680,13 +684,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // SessionPackets
-    public void insertSessionPacket(SessionPacket packet, String dname) {
+    public void insertSessionPacket(SessionPacket packet, String dname, long sessionId) {
         mLock.writeLock().lock();
         try {
             SQLiteDatabase db = this.getWritableDatabase();
             db.beginTransactionNonExclusive();
             try {
                 ContentValues cv = new ContentValues();
+
+                cv.put("sessionId", sessionId);
 
                 if (packet.uid < 0)
                     cv.putNull("uid");
@@ -818,6 +824,30 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         } finally {
             mLock.readLock().unlock();
         }
+    }
+
+    public long getExistingSessionId(SessionPacket packet) {
+        Cursor c = null;
+        mLock.readLock().lock();
+        try {
+            SQLiteDatabase db = this.getReadableDatabase();
+            String query = "SELECT ID AS _id, *";
+            query += " FROM sessions";
+            query += " WHERE (daddr = ? AND dport = ? AND saddr = ? AND sport = ?)";
+            query += " OR (daddr = ? AND dport = ? AND saddr = ? AND sport = ?)";
+            query += " ORDER BY time DESC";
+            c = db.rawQuery(query, new String[]{packet.daddr, Integer.toString(packet.dport), packet.saddr, Integer.toString(packet.sport),
+                    packet.saddr, Integer.toString(packet.sport), packet.daddr, Integer.toString(packet.dport)});
+        } finally {
+            mLock.readLock().unlock();
+        }
+        if(c != null) {
+            if(c.getCount() != 1)
+                return -1;
+            c.moveToPosition(0);
+            return c.getLong(c.getColumnIndex("ID"));
+        }
+        return -1;
     }
 
     // Access

@@ -240,7 +240,7 @@ public class CipherLookup {
 
     public static int getCipherIndex(int hex){
         for(int i=0; i<cipherLookupTable.length; i++) {
-            if(cipherLookupTable[i][0] == hex) {
+            if((int)cipherLookupTable[i][0] == hex) {
                 return i;
             }
         }
