@@ -22,14 +22,14 @@ uint16_t getCipherSuite(uint8_t *data) {
     //Server Hello
     // 0: type
     // 1-3: length
-    // 5/6: tls version
-    // 7-39: 32 byte random
-    // 40: sessid length
-    // 41+: sessid
+    // 4/5: tls version
+    // 6-37: 32 byte random
+    // 38: sessid length
+    // 39+: sessid
     // xxx: 2 byte, cipher suite
 
-    uint8_t sessid_length = *(data + 40);
-    uint16_t cipher_suite = ntohs(*(data + 40 + sessid_length));
+    uint8_t sessid_length = *(data + 38);
+    uint16_t cipher_suite = ntohs(*((u_int16_t *)(data + 39 + sessid_length)));
 
     return cipher_suite;
 }
@@ -42,7 +42,7 @@ void analyze_ssl(uint8_t *data, const size_t datalength, struct sslData *sslData
         struct sslhdr *sslhdr = (struct sslhdr *) data;
         if(is_valid_ssl_hdr(sslhdr)) {
             // TODO:
-            sslData->version = ntohs(sslhdr->version);
+            //sslData->version = ntohs(sslhdr->version);
             sslData->ctype = sslhdr->type;
 
             switch(sslhdr->type) {
@@ -56,14 +56,15 @@ void analyze_ssl(uint8_t *data, const size_t datalength, struct sslData *sslData
 
                     switch(handshake->type) {
                         case HTYPE_CLT_HELLO:
-                            log_android(ANDROID_LOG_DEBUG, "Client Hello");
-                            sslData->version = ntohs((u_int16_t)*(hdata + sizeof(struct sslhnd)));
+                            sslData->version = ntohs(*((u_int16_t *)(hdata + sizeof(struct sslhnd))));
+                            log_android(ANDROID_LOG_DEBUG, "Client Hello: version 0x%x", sslData->version);
                             break;
 
                         case HTYPE_SRV_HELLO:
-                            log_android(ANDROID_LOG_DEBUG, "Server Hello");
-                            sslData->version = ntohs((u_int16_t)*(hdata + sizeof(struct sslhnd)));
+                            sslData->version = ntohs(*((u_int16_t *)(hdata + sizeof(struct sslhnd))));
                             sslData->cipher = getCipherSuite(hdata);
+                            log_android(ANDROID_LOG_DEBUG, "Server Hello: cipher 0x%x version 0x%x",
+                                        sslData->cipher, sslData->version);
                             break;
 
                         case HTYPE_SRV_HELLO_DONE:

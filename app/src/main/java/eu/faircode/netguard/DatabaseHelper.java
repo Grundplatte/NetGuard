@@ -612,16 +612,32 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             SQLiteDatabase db = this.getWritableDatabase();
             db.beginTransactionNonExclusive();
             try {
-                String sql = "UPDATE sessions SET";
-                sql += " TLSversion = IFNULL(TLSversion, ?),";
-                sql += " cipher = IFNULL(cipher, ?)";
-                sql += " WHERE ID = ?";
-                db.execSQL(sql, new Object[]{packet.TLSversion, packet.cipher, sessionId});
+                if(packet.uid != 0) {
+                    String sql = "UPDATE sessions SET";
+                    sql += " uid = IFNULL(uid, ?)";
+                    sql += " WHERE ID = ?";
+                    db.execSQL(sql, new String[]{Integer.toString(packet.uid), Long.toString(sessionId)});
+                }
 
-                sql = "UPDATE sessions SET";
-                sql += " time = ?";
-                sql += " WHERE ID = ?";
-                db.execSQL(sql, new Object[]{packet.time, sessionId});
+                if(packet.TLSversion != 0) {
+                    String sql1 = "UPDATE sessions SET";
+                    sql1 += " TLSversion = IFNULL(TLSversion, ?)";
+                    sql1 += " WHERE ID = ?";
+                    db.execSQL(sql1, new String[]{Integer.toString(packet.TLSversion), Long.toString(sessionId)});
+                }
+
+                if(packet.cipher != 0) {
+                    String sql2 = "UPDATE sessions SET";
+                    sql2 += " cipher = IFNULL(cipher, ?)";
+                    sql2 += " WHERE ID = ?";
+                    db.execSQL(sql2, new String[]{Integer.toString(packet.cipher), Long.toString(sessionId)});
+                }
+
+
+                String sql3 = "UPDATE sessions SET";
+                sql3 += " time = ?";
+                sql3 += " WHERE ID = ?";
+                db.execSQL(sql3, new Object[]{packet.time, sessionId});
 
                 db.setTransactionSuccessful();
             } finally {
