@@ -335,7 +335,7 @@ void handle_ip(const struct arguments *args,
         analyze_ssl(data, datalength, &sslData);
     }
 
-    jobject objSession = create_session(
+    jobject objSession = create_session_packet(
             args, version, IPPROTO_TCP, source, sport,
             dest, dport, sslData.version, sslData.cipher, sslData.hash, data, datalength, flags);
 

@@ -1287,7 +1287,7 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
     if (tcp->rst)
         flags[flen++] = 'R';
 
-    jobject objSession = create_session(
+    jobject objSession = create_session_packet(
             args, cur->version, IPPROTO_TCP, source, sport,
             dest, dport, sslData.version, sslData.cipher, sslData.hash, data, datalen, flags);
 

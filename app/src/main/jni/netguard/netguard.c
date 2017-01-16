@@ -42,7 +42,7 @@ extern long pcap_file_size;
 
 // JNI
 
-jclass clsSession;
+jclass clsSessionPacket;
 jclass clsPacket;
 jclass clsAllowed;
 jclass clsRR;
@@ -57,8 +57,8 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
         return -1;
     }
 
-    const char *session = "eu/faircode/netguard/Session";
-    clsSession = jniGlobalRef(env, jniFindClass(env, session));
+    const char *session = "eu/faircode/netguard/SessionPacket";
+    clsSessionPacket = jniGlobalRef(env, jniFindClass(env, session));
 
     const char *packet = "eu/faircode/netguard/Packet";
     clsPacket = jniGlobalRef(env, jniFindClass(env, packet));
@@ -793,9 +793,9 @@ void logSession(const struct arguments *args, jobject jsession) {
 
     jclass clsService = (*args->env)->GetObjectClass(args->env, args->instance);
 
-    const char *signature = "(Leu/faircode/netguard/Session;)V";
+    const char *signature = "(Leu/faircode/netguard/SessionPacket;)V";
     if (midLogSession == NULL)
-        midLogSession = jniGetMethodID(args->env, clsService, "logSession", signature);
+        midLogSession = jniGetMethodID(args->env, clsService, "logSessionPacket", signature);
 
     (*args->env)->CallVoidMethod(args->env, args->instance, midLogSession, jsession);
 
@@ -830,19 +830,19 @@ jfieldID fidSessionData = NULL;
 jfieldID fidSessionFlags = NULL;
 
 
-jobject create_session(const struct arguments *args,
-                       jint version,
-                       jint protocol,
-                       const char *source,
-                       jint sport,
-                       const char *dest,
-                       jint dport,
-                       jint tlsversion,
-                       jint cipher,
-                       jint hash,
-                       const char *data,
-                       const size_t datalength,
-                       const char *flags) {
+jobject create_session_packet(const struct arguments *args,
+                              jint version,
+                              jint protocol,
+                              const char *source,
+                              jint sport,
+                              const char *dest,
+                              jint dport,
+                              jint tlsversion,
+                              jint cipher,
+                              jint hash,
+                              const char *data,
+                              const size_t datalength,
+                              const char *flags) {
     JNIEnv *env = args->env;
 
 #ifdef PROFILE_JNI
@@ -857,25 +857,25 @@ jobject create_session(const struct arguments *args,
         env->SetByteArrayRegion (ret, 0, 3, b);
      */
 
-    const char *session = "eu/faircode/netguard/Session";
+    const char *session = "eu/faircode/netguard/SessionPacket";
     if (midInitSession == NULL)
-        midInitSession = jniGetMethodID(env, clsSession, "<init>", "()V");
-    jobject jsession = jniNewObject(env, clsSession, midInitSession, session);
+        midInitSession = jniGetMethodID(env, clsSessionPacket, "<init>", "()V");
+    jobject jsession = jniNewObject(env, clsSessionPacket, midInitSession, session);
 
     if (fidSessionVersion == NULL) {
         const char *string = "Ljava/lang/String;";
         fidSessionTime = jniGetFieldID(env, clsPacket, "time", "J");
-        fidSessionVersion = jniGetFieldID(env, clsSession, "version", "I");
-        fidSessionProtocol = jniGetFieldID(env, clsSession, "protocol", "I");
-        fidSessionSaddr = jniGetFieldID(env, clsSession, "saddr", string);
-        fidSessionSport = jniGetFieldID(env, clsSession, "sport", "I");
-        fidSessionDaddr = jniGetFieldID(env, clsSession, "daddr", string);
-        fidSessionDport = jniGetFieldID(env, clsSession, "dport", "I");
-        fidSessionTLSVersion = jniGetFieldID(env, clsSession, "TLSversion", "I");
-        fidSessionCipher = jniGetFieldID(env, clsSession, "cipher", "I");
-        fidSessionCipher = jniGetFieldID(env, clsSession, "hash", "I");
-        fidSessionData = jniGetFieldID(env, clsSession, "data", string);
-        fidSessionFlags = jniGetFieldID(env, clsSession, "flags", string);
+        fidSessionVersion = jniGetFieldID(env, clsSessionPacket, "version", "I");
+        fidSessionProtocol = jniGetFieldID(env, clsSessionPacket, "protocol", "I");
+        fidSessionSaddr = jniGetFieldID(env, clsSessionPacket, "saddr", string);
+        fidSessionSport = jniGetFieldID(env, clsSessionPacket, "sport", "I");
+        fidSessionDaddr = jniGetFieldID(env, clsSessionPacket, "daddr", string);
+        fidSessionDport = jniGetFieldID(env, clsSessionPacket, "dport", "I");
+        fidSessionTLSVersion = jniGetFieldID(env, clsSessionPacket, "TLSversion", "I");
+        fidSessionCipher = jniGetFieldID(env, clsSessionPacket, "cipher", "I");
+        fidSessionCipher = jniGetFieldID(env, clsSessionPacket, "hash", "I");
+        fidSessionData = jniGetFieldID(env, clsSessionPacket, "data", string);
+        fidSessionFlags = jniGetFieldID(env, clsSessionPacket, "flags", string);
     }
 
     struct timeval tv;
