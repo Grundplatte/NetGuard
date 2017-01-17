@@ -91,6 +91,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         public ImageView ivLock;
         public ImageView ivStatus;
         public ImageView ivExpander;
+        public ImageView ivPacketCount;
 
         //details
         public TextView tvAppName;
@@ -130,6 +131,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
             ivLock = (ImageView) view.findViewById(R.id.ivLock);
             ivStatus = (ImageView) view.findViewById(R.id.ivStatus);
             ivExpander = (ImageView) view.findViewById(R.id.ivExpander);
+            ivPacketCount = (ImageView) view.findViewById(R.id.ivPacketCount);
 
             tvAppName = (TextView) view.findViewById(R.id.tvName);
             tvAppVersion = (TextView) view.findViewById(R.id.tvAppVersion);
@@ -316,12 +318,16 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         else
             viewHolder.ivLock.setImageResource(R.drawable.lock_http);
 
+        //todo: implement check
         //show status icon
         isGood = true;
         if (isGood)
             viewHolder.ivStatus.setImageResource(R.drawable.status_ok);
         else
             viewHolder.ivStatus.setImageResource(R.drawable.status_attention);
+
+        //show packet Count icon
+        viewHolder.ivPacketCount.setImageResource(R.drawable.packet_count);
 
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
             Drawable wrap_lock = DrawableCompat.wrap(viewHolder.ivLock.getDrawable());
@@ -336,9 +342,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         // Show destination port
         viewHolder.tvDPort.setText(dport < 0 ? "" : Integer.toString(dport));
 
-        // todo: Implement
         // Show packet counter
-
         viewHolder.tvPacketCount.setText(Integer.toString(packetCount));
 
 
@@ -407,7 +411,6 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
                 }
             }.execute(daddr);
 
-            // todo: implement
             //packet counters
             viewHolder.tvPacketsReceived.setText("    Packets Received: " + Integer.toString(pdown));
             viewHolder.tvpacketsSent.setText("    Packets Sent: " + Integer.toString(pup));
