@@ -16,7 +16,7 @@ public class SessionPacket {
     public int TLSversion;
     public int cipher;
     public int hash;
-    public String data;
+    public byte[] data;
     public String flags;
 
     public SessionPacket() {

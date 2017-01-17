@@ -166,7 +166,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 ", TLSversion INTEGER NULL" +
                 ", cipher INTEGER NULL" +
                 ", hash INTEGER NULL" +
-                ", data TEXT" +
+                ", data BLOB" +
                 ", flags TEXT" +
                 ", direction INTEGER NULL" +
                 ");");
@@ -194,7 +194,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 ", TLSversion INTEGER NULL" +
                 ", cipher INTEGER NULL" +
                 ", hash INTEGER NULL" +
-                ", data TEXT" +
+                ", data BLOB" +
                 ", flags TEXT" +
                 ", pup INTEGER NULL" +
                 ", pdown INTEGER NULL" +

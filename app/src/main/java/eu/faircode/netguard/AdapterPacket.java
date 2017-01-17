@@ -70,7 +70,7 @@ public class AdapterPacket extends CursorAdapter {
     public void bindView(final View view, final Context context, final Cursor cursor) {
         // Get values
         long time = cursor.getLong(colPacketTime);
-        String payload = cursor.getString(colPacketData);
+        String payload = new String(cursor.getBlob(colPacketData));
         Log.d(TAG, "PAYLOAD");
         // Get views
         TextView tvTime = (TextView) view.findViewById(R.id.tvTime);

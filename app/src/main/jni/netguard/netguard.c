@@ -877,7 +877,7 @@ jobject create_session_packet(const struct arguments *args,
         fidSessionTLSVersion = jniGetFieldID(env, clsSessionPacket, "TLSversion", "I");
         fidSessionCipher = jniGetFieldID(env, clsSessionPacket, "cipher", "I");
         fidSessionHash = jniGetFieldID(env, clsSessionPacket, "hash", "I");
-        fidSessionData = jniGetFieldID(env, clsSessionPacket, "data", string);
+        fidSessionData = jniGetFieldID(env, clsSessionPacket, "data", "[B");
         fidSessionFlags = jniGetFieldID(env, clsSessionPacket, "flags", string);
     }
 
@@ -886,8 +886,10 @@ jobject create_session_packet(const struct arguments *args,
     jlong t = tv.tv_sec * 1000LL + tv.tv_usec / 1000;
     jstring jsource = (*env)->NewStringUTF(env, source);
     jstring jdest = (*env)->NewStringUTF(env, dest);
-    jstring jData = (*env)->NewString(env, data, datalength);
     jstring jFlags = (*env)->NewStringUTF(env, flags);
+
+    jbyteArray jData = (*env)->NewByteArray(env, datalength);
+    (*env)->SetByteArrayRegion(env, jData, 0, datalength, data);
 
     (*env)->SetIntField(env, jsession, fidSessionUid, uid);
     (*env)->SetLongField(env, jsession, fidSessionTime, t);
