@@ -373,7 +373,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
                 viewHolder.tvCipherProtocol.setText("    Cipher Protocol: " + CipherLookup.getCipherProtocol(cipherIndex));
                 viewHolder.tvKxAlgo.setText("    Key Exchange Algorithm: " + CipherLookup.getKxAlgo(cipherIndex));
                 viewHolder.tvAuthAlgo.setText("    Authentication Algorithm: " + CipherLookup.getAuthAlgo(cipherIndex));
-                viewHolder.tvHashAlgo.setText("    Hash Algorithm:" + CipherLookup.getHashAlgo(cipherIndex));
+                viewHolder.tvHashAlgo.setText("    Hash Algorithm: " + CipherLookup.getHashAlgo(cipherIndex));
                 viewHolder.tvSymEncAlgo.setText("    Symmetric Encryption Algorithm: " + CipherLookup.getSymEncAlgo(cipherIndex));
                 viewHolder.tvSymEncKeySize.setText("    Symmetric Encryption Key Size: " + CipherLookup.getSymEncKeySize(cipherIndex));
             }

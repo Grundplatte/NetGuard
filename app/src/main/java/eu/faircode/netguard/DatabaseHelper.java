@@ -871,7 +871,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
             String query = "SELECT ID AS _id, *";
             query += " FROM sessionPackets";
             query += " WHERE (sessionId = ?)";
-            query += " ORDER BY time DESC";
+            query += " ORDER BY time ASC";
             return db.rawQuery(query, new String[]{Long.toString(sessionId)});
         } finally {
             mLock.readLock().unlock();
