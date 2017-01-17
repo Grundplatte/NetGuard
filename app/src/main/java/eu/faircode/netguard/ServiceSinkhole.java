@@ -660,19 +660,43 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
             // Traffic sessions
             if (analysis) {
                 long sessionId = -1;
+                // 1 -> outgoing packet(up), 0 -> incoming packet(down)
+                int direction = -1;
+                int packetCount = -1;
+
                 // Get real name
                 String dname = dh.getQName(packet.daddr);
+
+                if(isIncomingPacket(packet.daddr))
+                    direction = 0;
+                else
+                    direction = 1;
+
                 sessionId = dh.getExistingSessionId(packet);
                 if(sessionId < 0) {
-                    sessionId = dh.insertSession(packet, dname);
+                    sessionId = dh.insertSession(packet, dname, direction);
                 }
                 else {
                     // upgrade entry
-                    dh.updateSession(packet, sessionId);
+                    packetCount = dh.getPacketCount(packet, direction);
+                    dh.updateSession(packet, sessionId, direction, packetCount);
                 }
-                dh.insertSessionPacket(packet, dname, sessionId);
+                dh.insertSessionPacket(packet, dname, sessionId, direction);
             }
 
+        }
+
+        private boolean isIncomingPacket(String addr) {
+            try {
+                SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(ServiceSinkhole.this);
+                InetAddress vpn4 = InetAddress.getByName(prefs.getString("vpn4", "10.1.10.1"));
+                InetAddress vpn6 = InetAddress.getByName(prefs.getString("vpn6", "fd00:1:fd00:1:fd00:1:fd00:1"));
+                InetAddress a = InetAddress.getByName(addr);
+                if (a.equals(vpn4) || a.equals(vpn6))
+                    return true;
+            } catch (UnknownHostException ignored) {
+            }
+            return false;
         }
 
         private void usage(Usage usage) {

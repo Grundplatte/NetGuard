@@ -168,6 +168,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 ", hash INTEGER NULL" +
                 ", data TEXT" +
                 ", flags TEXT" +
+                ", direction INTEGER NULL" +
                 ");");
         db.execSQL("CREATE INDEX idx_sessionPackets_time ON sessionPackets(time)");
         db.execSQL("CREATE INDEX idx_sessionPackets_dest ON sessionPackets(daddr)");
@@ -195,6 +196,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 ", hash INTEGER NULL" +
                 ", data TEXT" +
                 ", flags TEXT" +
+                ", pup INTEGER NULL" +
+                ", pdown INTEGER NULL" +
                 ");");
         db.execSQL("CREATE INDEX idx_sessions_time ON sessions(time)");
         db.execSQL("CREATE INDEX idx_sessions_dest ON sessions(daddr)");
@@ -540,7 +543,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // Sessions
-    public long insertSession(SessionPacket packet, String dname) {
+    public long insertSession(SessionPacket packet, String dname, int direction) {
         mLock.writeLock().lock();
         long sessionId = -1;
         try {
@@ -595,6 +598,15 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 if (sessionId == -1)
                     Log.e(TAG, "Insert sessions failed");
 
+                if(direction == 1) {
+                    cv.put("pup", 1);
+                    cv.put("pdown", 0);
+                }
+                else {
+                    cv.put("pup", 0);
+                    cv.put("pdown", 1);
+                }
+
                 db.setTransactionSuccessful();
             } finally {
                 db.endTransaction();
@@ -606,7 +618,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return sessionId;
     }
 
-    public void updateSession(SessionPacket packet, long sessionId) {
+    public void updateSession(SessionPacket packet, long sessionId, int direction, int packetCount) {
         mLock.writeLock().lock();
         try {
             SQLiteDatabase db = this.getWritableDatabase();
@@ -633,7 +645,18 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     db.execSQL(sql2, new String[]{Integer.toString(packet.cipher), Long.toString(sessionId)});
                 }
 
-
+                if(direction == 1) {
+                    String sql3 = "UPDATE sessions SET";
+                    sql3 += " pup = ?";
+                    sql3 += " WHERE ID = ?";
+                    db.execSQL(sql3, new Object[]{packetCount, sessionId});
+                }
+                else {
+                    String sql3 = "UPDATE sessions SET";
+                    sql3 += " pdown = ?";
+                    sql3 += " WHERE ID = ?";
+                    db.execSQL(sql3, new Object[]{packetCount, sessionId});
+                }
                 String sql3 = "UPDATE sessions SET";
                 sql3 += " time = ?";
                 sql3 += " WHERE ID = ?";
@@ -730,7 +753,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // SessionPackets
-    public void insertSessionPacket(SessionPacket packet, String dname, long sessionId) {
+    public void insertSessionPacket(SessionPacket packet, String dname, long sessionId, int direction) {
         mLock.writeLock().lock();
         try {
             SQLiteDatabase db = this.getWritableDatabase();
@@ -783,6 +806,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
                 if (db.insert("sessionPackets", null, cv) == -1)
                     Log.e(TAG, "Insert sessionPackets failed");
+
+                cv.put("direction", direction);
 
                 db.setTransactionSuccessful();
             } finally {
@@ -885,6 +910,35 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 return -1;
             c.moveToPosition(0);
             return c.getLong(c.getColumnIndex("ID"));
+        }
+        return -1;
+    }
+
+    //todo: implement better
+    public int getPacketCount(SessionPacket packet, int direction) {
+        Cursor c = null;
+        mLock.readLock().lock();
+        try {
+            SQLiteDatabase db = this.getReadableDatabase();
+            String query = "SELECT ID AS _id, *";
+            query += " FROM sessions";
+            query += " WHERE (daddr = ? AND dport = ? AND saddr = ? AND sport = ?)";
+            query += " OR (daddr = ? AND dport = ? AND saddr = ? AND sport = ?)";
+            query += " ORDER BY time DESC";
+            c = db.rawQuery(query, new String[]{packet.daddr, Integer.toString(packet.dport), packet.saddr, Integer.toString(packet.sport),
+                    packet.saddr, Integer.toString(packet.sport), packet.daddr, Integer.toString(packet.dport)});
+        } finally {
+            mLock.readLock().unlock();
+        }
+        if(c != null) {
+            if(c.getCount() != 1)
+                return -1;
+            c.moveToPosition(0);
+            if(direction == 1)
+                return c.getInt(c.getColumnIndex("pup"));
+            else
+                return c.getInt(c.getColumnIndex("pdown"));
+
         }
         return -1;
     }

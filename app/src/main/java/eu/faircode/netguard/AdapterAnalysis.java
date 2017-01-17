@@ -13,6 +13,7 @@ import android.preference.PreferenceManager;
 import android.provider.ContactsContract;
 import android.support.v4.graphics.drawable.DrawableCompat;
 import android.support.v4.view.ViewCompat;
+import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.util.TypedValue;
@@ -23,6 +24,7 @@ import android.widget.Filter;
 import android.widget.Filterable;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ListView;
 import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
@@ -42,25 +44,10 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
 
     private Context context;
     private RecyclerView rv;
+    private ListView lvPayload;
 
     private boolean isHTTPS;
     private boolean isGood;
-
-    private int colPacketSessionId;
-    private int colPacketUid;
-    private int colPacketTime;
-    private int colPacketVersion;
-    private int colPacketProtocol;
-    private int colPacketDAddr;
-    private int colPacketSAddr;
-    private int colPacketDPort;
-    private int colPacketSPort;
-    private int colPacketDName;
-    private int colPacketTLSversion;
-    private int colPacketCipher;
-    private int colPacketHash;
-    private int colPacketData;
-    private int colPacketFlags;
 
     private int colSessionId;
     private int colSessionUid;
@@ -74,8 +61,8 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
     private int colSessionDName;
     private int colSessionTLSversion;
     private int colSessionCipher;
-    private int colSessionData;
-    private int colSessionFlags;
+    private int colSessionPup;
+    private int colSessionPdown;
 
     private int colorOn;
     private int colorOff;
@@ -97,7 +84,6 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         public LinearLayout llAnalysisExpanded;
         public LinearLayout llHTTPS;
 
-
         public TextView tvTime;
         public TextView tvDaddr;
         public TextView tvDPort;
@@ -112,7 +98,6 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         public TextView tvProtocol;
         public TextView tvHTTP;
         public TextView tvTLSversion;
-        public TextView tvCipherSuite;
         public TextView tvCipherProtocol;
         public TextView tvKxAlgo;
         public TextView tvAuthAlgo;
@@ -131,6 +116,8 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         public ViewHolder(View itemView) {
             super(itemView);
             view = itemView;
+
+            lvPayload = (ListView) view.findViewById(R.id.lvPayload);
 
             llAnalysis = (LinearLayout) view.findViewById(R.id.llAnalysis);
             llAnalysisExpanded = (LinearLayout) view.findViewById(R.id.llAnalysisExpanded);
@@ -182,25 +169,6 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
 
         this.context = context;
 
-        /*
-        // Session Packet Table
-        colPacketSessionId = cursorPacket.getColumnIndex("sessionId");
-        colPacketUid = cursorPacket.getColumnIndex("uid");
-        colPacketTime = cursorPacket.getColumnIndex("time");
-        colPacketVersion = cursorPacket.getColumnIndex("version");
-        colPacketProtocol = cursorPacket.getColumnIndex("protocol");
-        colPacketDAddr = cursorPacket.getColumnIndex("daddr");
-        colPacketSAddr = cursorPacket.getColumnIndex("saddr");
-        colPacketDPort = cursorPacket.getColumnIndex("dport");
-        colPacketSPort = cursorPacket.getColumnIndex("sport");
-        colPacketDName = cursorPacket.getColumnIndex("dname");
-        colPacketData = cursorPacket.getColumnIndex("data");
-        colPacketTLSversion = cursorPacket.getColumnIndex("TLSversion");
-        colPacketCipher = cursorPacket.getColumnIndex("cipher");
-        colPacketHash = cursorPacket.getColumnIndex("hash");
-        colPacketFlags = cursorPacket.getColumnIndex("flags");
-        */
-
         // Session Table
         colSessionId = cursorSession.getColumnIndex("ID");
         colSessionUid = cursorSession.getColumnIndex("uid");
@@ -212,10 +180,10 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         colSessionDPort = cursorSession.getColumnIndex("dport");
         colSessionSPort = cursorSession.getColumnIndex("sport");
         colSessionDName = cursorSession.getColumnIndex("dname");
-        colSessionData = cursorSession.getColumnIndex("data");
         colSessionTLSversion = cursorSession.getColumnIndex("TLSversion");
         colSessionCipher = cursorSession.getColumnIndex("cipher");
-        colSessionFlags = cursorSession.getColumnIndex("flags");
+        colSessionPup = cursorSession.getColumnIndex("pup");
+        colSessionPdown = cursorSession.getColumnIndex("pdown");
 
 
         TypedValue tv = new TypedValue();
@@ -302,9 +270,9 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         int dport = (cursor.isNull(colSessionDPort) ? -1 : cursor.getInt(colSessionDPort));
         int sport = (cursor.isNull(colSessionSPort) ? -1 : cursor.getInt(colSessionSPort));
         int uid = (cursor.isNull(colSessionUid) ? -1 : cursor.getInt(colSessionUid));
-        Log.d(TAG, "UID: " + uid);
-        //long sessionId = (cursor.isNull(colPacketSessionId) ? -2 : cursor.getLong(colPacketSessionId));
-
+        int pup = (cursor.isNull(colSessionPup) ? -1 : cursor.getInt(colSessionPup));
+        int pdown = (cursor.isNull(colSessionPdown) ? -1 : cursor.getInt(colSessionPdown));
+        int packetCount = pup + pdown;
         // Show time
         viewHolder.tvTime.setText(new SimpleDateFormat("HH:mm:ss").format(time));
 
@@ -370,7 +338,8 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
 
         // todo: Implement
         // Show packet counter
-        viewHolder.tvPacketCount.setText("12");
+
+        viewHolder.tvPacketCount.setText(Integer.toString(packetCount));
 
 
         // show details (expand)
@@ -380,7 +349,6 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
             // FIXME: not needed?
             cursor.moveToPosition((int)pos);
 
-            //String payload = (cursor.isNull(colPacketData) ? "" : cursor.getString(colPacketData));
             long sessionId = (cursor.isNull(colSessionId) ? -1 : cursor.getLong(colSessionId));
             int version = (cursor.isNull(colSessionVersion) ? -1 : cursor.getInt(colSessionVersion));
             int protocol = (cursor.isNull(colSessionProtocol) ? -1 : cursor.getInt(colSessionProtocol));
@@ -438,24 +406,22 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
                     ViewCompat.setHasTransientState(viewHolder.tvOrganization, false);
                 }
             }.execute(daddr);
+
+            // todo: implement
+            //packet counters
+            viewHolder.tvPacketsReceived.setText("    Packets Received: " + Integer.toString(pdown));
+            viewHolder.tvpacketsSent.setText("    Packets Sent: " + Integer.toString(pup));
+
+            // TODO: show packets
+            Cursor packetsCursor = DatabaseHelper.getInstance(context).getSessionPackets(sessionId);
+            Log.d(TAG, "PACKETS: " + packetsCursor.getCount());
+            AdapterPacket adapter = new AdapterPacket(context, packetsCursor);
+            lvPayload.setAdapter(adapter);
+
         }
         else {
             viewHolder.llAnalysisExpanded.setVisibility(View.GONE);
         }
-
-        // todo: implement
-        int received = 5;
-        int sent = 3;
-        //packet counters
-        viewHolder.tvPacketsReceived.setText("    Packets Received: " + received);
-        viewHolder.tvpacketsSent.setText("    Packets Sent: " + sent);
-
-
-        // TODO: show packets
-        //Cursor packetsCursor = DatabaseHelper.getInstance(context).getSessionPackets(sessionId);
-        //viewHolder.tvPayload.setText("FAG");
-
-
     }
 
     public String getTLSName(int version) {
