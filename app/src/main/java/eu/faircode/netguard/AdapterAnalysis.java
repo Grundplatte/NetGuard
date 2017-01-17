@@ -44,7 +44,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
 
     private Context context;
     private RecyclerView rv;
-    private ListView lvPayload;
+    private PacketListLayout lvPayload;
 
     private boolean isHTTPS;
     private boolean isGood;
@@ -117,7 +117,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
             super(itemView);
             view = itemView;
 
-            lvPayload = (ListView) view.findViewById(R.id.lvPayload);
+            lvPayload = (PacketListLayout) view.findViewById(R.id.lvPayload);
 
             llAnalysis = (LinearLayout) view.findViewById(R.id.llAnalysis);
             llAnalysisExpanded = (LinearLayout) view.findViewById(R.id.llAnalysisExpanded);
@@ -416,7 +416,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
             Cursor packetsCursor = DatabaseHelper.getInstance(context).getSessionPackets(sessionId);
             Log.d(TAG, "PACKETS: " + packetsCursor.getCount());
             AdapterPacket adapter = new AdapterPacket(context, packetsCursor);
-            lvPayload.setAdapter(adapter);
+            lvPayload.setList(adapter);
 
         }
         else {

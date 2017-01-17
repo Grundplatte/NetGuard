@@ -116,6 +116,8 @@ public class AdapterLog extends CursorAdapter {
         }
     }
 
+
+
     public void setResolve(boolean resolve) {
         this.resolve = resolve;
     }

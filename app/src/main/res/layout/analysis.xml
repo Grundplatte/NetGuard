@@ -340,7 +340,8 @@
                 android:id="@+id/textView11"
                 android:textSize="18sp" />
 
-            <ListView
+            <eu.faircode.netguard.PacketListLayout
+                android:orientation="vertical"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:id="@+id/lvPayload" />
