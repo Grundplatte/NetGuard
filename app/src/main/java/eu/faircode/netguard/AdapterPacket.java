@@ -86,13 +86,10 @@ public class AdapterPacket extends CursorAdapter {
         int direction = cursor.getInt(colPacketDirection);
         int dport = cursor.getInt(colPacketDPort);
         int sport = cursor.getInt(colPacketSPort);
-        String payload;
 
-        if(dport == 443 || sport == 443) {
+        if(!payload.isEmpty() && (dport == 443 || sport == 443)) {
             payload = "Payload encrypted!";
         }
-        else
-            payload = new String(cursor.getBlob(colPacketData));
 
         // Get views
         TextView tvTime = (TextView) view.findViewById(R.id.tvTime);
