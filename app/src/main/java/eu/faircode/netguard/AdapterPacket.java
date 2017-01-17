@@ -21,6 +21,7 @@ public class AdapterPacket extends CursorAdapter {
 
     private int colPacketTime;
     private int colPacketData;
+    private int colPacketFlags;
 
     /*
     private int colPacketSessionId;
@@ -35,7 +36,6 @@ public class AdapterPacket extends CursorAdapter {
     private int colPacketTLSversion;
     private int colPacketCipher;
     private int colPacketHash;
-    private int colPacketFlags;
     */
 
     public AdapterPacket(Context context, Cursor cursorPacket) {
@@ -43,6 +43,7 @@ public class AdapterPacket extends CursorAdapter {
 
         colPacketTime = cursorPacket.getColumnIndex("time");
         colPacketData = cursorPacket.getColumnIndex("data");
+        colPacketFlags = cursorPacket.getColumnIndex("flags");
 
         /*
         colPacketSessionId = cursorPacket.getColumnIndex("sessionId");
@@ -57,7 +58,6 @@ public class AdapterPacket extends CursorAdapter {
         colPacketTLSversion = cursorPacket.getColumnIndex("TLSversion");
         colPacketCipher = cursorPacket.getColumnIndex("cipher");
         colPacketHash = cursorPacket.getColumnIndex("hash");
-        colPacketFlags = cursorPacket.getColumnIndex("flags");
         */
     }
 
@@ -71,7 +71,9 @@ public class AdapterPacket extends CursorAdapter {
         // Get values
         long time = cursor.getLong(colPacketTime);
         String payload = new String(cursor.getBlob(colPacketData));
-        Log.d(TAG, "PAYLOAD");
+        String flags = cursor.getString(colPacketFlags);
+
+
         // Get views
         TextView tvTime = (TextView) view.findViewById(R.id.tvTime);
         TextView tvPayload = (TextView) view.findViewById(R.id.tvPayload);
@@ -80,6 +82,10 @@ public class AdapterPacket extends CursorAdapter {
 
         // Show time
         tvTime.setText(new SimpleDateFormat("HH:mm:ss").format(time));
-        tvPayload.setText(payload);
+
+        if(payload.isEmpty())
+            tvPayload.setText(flags);
+        else
+            tvPayload.setText(payload);
     }
     }
