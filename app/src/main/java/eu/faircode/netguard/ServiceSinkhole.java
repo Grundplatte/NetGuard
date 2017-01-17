@@ -661,16 +661,15 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
             if (analysis) {
                 long sessionId = -1;
                 // 1 -> outgoing packet(up), 0 -> incoming packet(down)
-                int direction = -1;
-                int packetCount = -1;
+                boolean direction;
 
                 // Get real name
                 String dname = dh.getQName(packet.daddr);
 
                 if(isIncomingPacket(packet.daddr))
-                    direction = 0;
+                    direction = false;
                 else
-                    direction = 1;
+                    direction = true;
 
                 sessionId = dh.getExistingSessionId(packet);
                 if(sessionId < 0) {
@@ -678,8 +677,7 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                 }
                 else {
                     // upgrade entry
-                    packetCount = dh.getPacketCount(packet, direction);
-                    dh.updateSession(packet, sessionId, direction, packetCount);
+                    dh.updateSession(packet, sessionId, direction);
                 }
                 dh.insertSessionPacket(packet, dname, sessionId, direction);
             }

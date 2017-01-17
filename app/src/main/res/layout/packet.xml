@@ -21,15 +21,18 @@
             android:id="@+id/tvTime"
             android:layout_width="50dp"
             android:layout_height="wrap_content"
-            android:layout_gravity="center_vertical"
+            android:layout_marginTop="2dp"
+            android:layout_marginLeft="15dp"
             android:textAppearance="@style/TextSmall"
             android:textSize="12sp" />
 
         <ImageView
-            android:id="@+id/ivIcon"
-            android:layout_width="24dip"
-            android:layout_height="24dip"
-            android:layout_gravity="center_vertical" />
+            android:id="@+id/ivArrow"
+            android:layout_width="16dip"
+            android:layout_height="16dip"
+            android:layout_marginTop="2dp"
+            android:layout_marginLeft="4dp"
+            android:layout_marginStart="4dp" />
 
         <TextView
             android:id="@+id/tvPayload"
