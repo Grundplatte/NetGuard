@@ -329,7 +329,6 @@ void handle_ip(const struct arguments *args,
             redirect = NULL;
     }
 
-    // TODO: out log
     struct sslData sslData;
     memset(&sslData, NULL, sizeof(struct sslData));
 

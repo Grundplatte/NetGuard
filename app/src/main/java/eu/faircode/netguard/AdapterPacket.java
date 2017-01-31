@@ -2,9 +2,11 @@ package eu.faircode.netguard;
 
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.support.v4.graphics.drawable.DrawableCompat;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -28,21 +30,7 @@ public class AdapterPacket extends CursorAdapter {
     private int colPacketDPort;
     private int colPacketSPort;
     private int colPacketFlags;
-
-    /*
-    private int colPacketSessionId;
-    private int colPacketUid;
-    private int colPacketVersion;
-    private int colPacketProtocol;
-    private int colPacketDAddr;
-    private int colPacketSAddr;
-    private int colPacketDPort;
-    private int colPacketSPort;
-    private int colPacketDName;
-    private int colPacketTLSversion;
-    private int colPacketCipher;
-    private int colPacketHash;
-    */
+    private int colSecure;
 
     public AdapterPacket(Context context, Cursor cursorPacket) {
         super(context, cursorPacket, 0);
@@ -53,28 +41,17 @@ public class AdapterPacket extends CursorAdapter {
         colPacketDirection = cursorPacket.getColumnIndex("direction");
         colPacketDPort = cursorPacket.getColumnIndex("dport");
         colPacketSPort = cursorPacket.getColumnIndex("sport");
+        colSecure = cursorPacket.getColumnIndex("secure");
 
-        /*
-        colPacketSessionId = cursorPacket.getColumnIndex("sessionId");
-        colPacketUid = cursorPacket.getColumnIndex("uid");
-        colPacketVersion = cursorPacket.getColumnIndex("version");
-        colPacketProtocol = cursorPacket.getColumnIndex("protocol");
-        colPacketDAddr = cursorPacket.getColumnIndex("daddr");
-        colPacketSAddr = cursorPacket.getColumnIndex("saddr");
-        colPacketDPort = cursorPacket.getColumnIndex("dport");
-        colPacketSPort = cursorPacket.getColumnIndex("sport");
-        colPacketDName = cursorPacket.getColumnIndex("dname");
-        colPacketTLSversion = cursorPacket.getColumnIndex("TLSversion");
-        colPacketCipher = cursorPacket.getColumnIndex("cipher");
-        colPacketHash = cursorPacket.getColumnIndex("hash");
-        */
     }
 
     @Override
     public View newView(Context context, Cursor cursor, ViewGroup parent) {
+        Log.d(TAG, "NewVIEW");
         return LayoutInflater.from(context).inflate(R.layout.packet, parent, false);
     }
 
+    //todo: sometimes the packets are not displayed (or it takes some time) - problem with the listview and DB
     @Override
     public void bindView(final View view, final Context context, final Cursor cursor) {
         // Get values
@@ -82,14 +59,10 @@ public class AdapterPacket extends CursorAdapter {
         String payload = new String(cursor.getBlob(colPacketData));
         String flags = cursor.getString(colPacketFlags);
 
-
         int direction = cursor.getInt(colPacketDirection);
         int dport = cursor.getInt(colPacketDPort);
         int sport = cursor.getInt(colPacketSPort);
-
-        if(!payload.isEmpty() && (dport == 443 || sport == 443)) {
-            payload = "Payload encrypted!";
-        }
+        int secure = cursor.getInt(colSecure);
 
         // Get views
         TextView tvTime = (TextView) view.findViewById(R.id.tvTime);
@@ -100,11 +73,20 @@ public class AdapterPacket extends CursorAdapter {
         // Show time
         tvTime.setText(new SimpleDateFormat("HH:mm:ss").format(time));
 
+
         //show payload
-        if(payload.isEmpty())
-            tvPayload.setText(flags);
+        if(!payload.isEmpty()) {
+            if (dport == 443 || sport == 443)
+                tvPayload.setText("Payload encrypted!");
+            else {
+                tvPayload.setText(payload);
+                if(secure == 9)
+                    tvPayload.setTextColor(Color.RED);
+            }
+        }
         else
-            tvPayload.setText(payload);
+            tvPayload.setText(flags);
+
 
         //show icon
         if(direction == 1) {

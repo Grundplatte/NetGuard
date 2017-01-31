@@ -54,6 +54,7 @@ import android.os.PowerManager;
 import android.os.Process;
 import android.os.SystemClock;
 import android.preference.PreferenceManager;
+import android.provider.Settings;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 import android.support.v4.content.ContextCompat;
@@ -172,6 +173,9 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
     private static final String ACTION_HOUSE_HOLDING = "eu.faircode.netguard.HOUSE_HOLDING";
     private static final String ACTION_SCREEN_OFF_DELAYED = "eu.faircode.netguard.SCREEN_OFF_DELAYED";
     private static final String ACTION_WATCHDOG = "eu.faircode.netguard.WATCHDOG";
+
+    private String IMEI = null;
+    private String phoneNumber = null;
 
     private native void jni_init();
 
@@ -662,6 +666,7 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                 long sessionId = -1;
                 // 1 -> outgoing packet(up), 0 -> incoming packet(down)
                 boolean direction;
+                int secure;
 
                 // Get real name
                 String dname = dh.getQName(packet.daddr);
@@ -671,17 +676,68 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                 else
                     direction = true;
 
+                secure = checkPacket(packet);
+
                 sessionId = dh.getExistingSessionId(packet);
                 if(sessionId < 0) {
-                    sessionId = dh.insertSession(packet, dname, direction);
+                    sessionId = dh.insertSession(packet, dname, direction, secure);
                 }
                 else {
                     // upgrade entry
-                    dh.updateSession(packet, sessionId, direction);
+                    dh.updateSession(packet, sessionId, direction, secure);
                 }
-                dh.insertSessionPacket(packet, dname, sessionId, direction);
+                dh.insertSessionPacket(packet, dname, sessionId, direction, secure);
             }
 
+        }
+
+        private int checkPacket(SessionPacket packet) {
+
+            // check TLS properties
+            int TLSversion = packet.TLSversion;
+            int cipher = packet.cipher;
+
+            // todo: problem with android 6+ - add permission request on runtime
+            // get IMEI and phoneNumber
+            /*
+            if(IMEI == null || phoneNumber == null) {
+                TelephonyManager telephonyManager = (TelephonyManager)getSystemService(Context.TELEPHONY_SERVICE);
+                IMEI =  telephonyManager.getDeviceId();
+                phoneNumber = telephonyManager.getLine1Number();
+            }
+            */
+
+            if((packet.dport == 443 || packet.sport == 443) && TLSversion != 0 && cipher != 0) {
+
+                // if TLS version < 1.2
+                if (TLSversion != 0x0303 && TLSversion != 0x0304)
+                    return 1;
+
+                int cipherIndex = CipherLookup.getCipherIndex(cipher);
+                CipherLookup.getCipherProtocol(cipherIndex);
+
+                // do not allow DES
+                if (CipherLookup.getSymEncAlgo(cipherIndex).contains("DES"))
+                    return 2;
+
+                // allow only AES keys > 128; 128 is secure -> only for demonstration
+                if (CipherLookup.getSymEncKeySize(cipherIndex).contains("128"))
+                    return 3;
+
+            }
+            else {
+                // todo: switch the payload check to C - better performance
+                // notify user if paload contains PhoneNumber, IMEI or password
+                /*
+                String payload = new String(packet.data);
+                if (!payload.isEmpty()) {
+                    if (payload.contains(IMEI) || payload.contains(phoneNumber) || payload.contains("password") || payload.contains("pwd")) {
+                        return 9;
+                    }
+                }
+                */
+            }
+            return 0;
         }
 
         private boolean isIncomingPacket(String addr) {
@@ -1190,8 +1246,6 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
         boolean log_app = prefs.getBoolean("log_app", false);
         boolean filter = prefs.getBoolean("filter", false);
 
-        //TODO: maybe start native analysis too
-
         Log.i(TAG, "Start native log=" + log + "/" + log_app + " filter=" + filter);
 
         // Prepare rules
@@ -1213,7 +1267,6 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
         else
             mapNoNotify.clear();
 
-        // FIXME: remove analysis
         if (analysis || log || log_app || filter) {
             int prio = Integer.parseInt(prefs.getString("loglevel", Integer.toString(Log.WARN)));
             if (prefs.getBoolean("socks5_enabled", false))
@@ -1609,7 +1662,6 @@ public class ServiceSinkhole extends VpnService implements SharedPreferences.OnS
                 allowed = new Allowed();
         }
 
-        // TODO: maybe setup extra structure for analysis
         if (prefs.getBoolean("log", false) || prefs.getBoolean("log_app", false) ||
                 prefs.getBoolean("analysis", false))
             logPacket(packet);

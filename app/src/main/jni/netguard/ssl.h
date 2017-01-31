@@ -57,7 +57,6 @@ struct sslData {
     __u8 htype; // TLS-Version
     __u16 cipher;
     __u16 hash;
-    // TODO: add other stuff
 };
 
 bool is_valid_ssl_hdr(struct sslhdr * sslhdr);

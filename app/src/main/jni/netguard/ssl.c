@@ -36,12 +36,11 @@ uint16_t getCipherSuite(uint8_t *data) {
 
 // only call
 void analyze_ssl(uint8_t *data, const size_t datalength, struct sslData *sslData) {
-    // TODO: Analyse tcp packet and save results in DB
         // check if its a TLS packet
 
         struct sslhdr *sslhdr = (struct sslhdr *) data;
         if(is_valid_ssl_hdr(sslhdr)) {
-            // TODO:
+
             //sslData->version = ntohs(sslhdr->version);
             sslData->ctype = sslhdr->type;
 

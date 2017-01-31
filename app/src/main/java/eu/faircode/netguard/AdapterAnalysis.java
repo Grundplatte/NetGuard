@@ -5,6 +5,7 @@ import android.content.SharedPreferences;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.AsyncTask;
@@ -47,7 +48,6 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
     private PacketListLayout lvPayload;
 
     private boolean isHTTPS;
-    private boolean isGood;
 
     private int colSessionId;
     private int colSessionUid;
@@ -63,6 +63,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
     private int colSessionCipher;
     private int colSessionPup;
     private int colSessionPdown;
+    private int colSessionSecure;
 
     private int colorOn;
     private int colorOff;
@@ -186,7 +187,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         colSessionCipher = cursorSession.getColumnIndex("cipher");
         colSessionPup = cursorSession.getColumnIndex("pup");
         colSessionPdown = cursorSession.getColumnIndex("pdown");
-
+        colSessionSecure = cursorSession.getColumnIndex("secure");
 
         TypedValue tv = new TypedValue();
         context.getTheme().resolveAttribute(R.attr.colorOn, tv, true);
@@ -272,6 +273,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         int dport = (cursor.isNull(colSessionDPort) ? -1 : cursor.getInt(colSessionDPort));
         int sport = (cursor.isNull(colSessionSPort) ? -1 : cursor.getInt(colSessionSPort));
         int uid = (cursor.isNull(colSessionUid) ? -1 : cursor.getInt(colSessionUid));
+        int secure = cursor.getInt(colSessionSecure);
         int pup = (cursor.isNull(colSessionPup) ? -1 : cursor.getInt(colSessionPup));
         int pdown = (cursor.isNull(colSessionPdown) ? -1 : cursor.getInt(colSessionPdown));
         int packetCount = pup + pdown;
@@ -313,18 +315,23 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         else
             isHTTPS = false;
 
-        if (isHTTPS)
+        boolean gotTLSProperties = true;
+        if (isHTTPS) {
             viewHolder.ivLock.setImageResource(R.drawable.lock_https);
+            int TLSversion_ = (cursor.isNull(colSessionTLSversion) ? -1 : cursor.getInt(colSessionTLSversion));
+            int cipher_ = (cursor.isNull(colSessionCipher) ? -1 : cursor.getInt(colSessionCipher));
+            if(TLSversion_ == -1 || cipher_ == -1)
+                gotTLSProperties = false;
+        }
         else
             viewHolder.ivLock.setImageResource(R.drawable.lock_http);
 
-        //todo: implement check
+
         //show status icon
-        isGood = true;
-        if (isGood)
-            viewHolder.ivStatus.setImageResource(R.drawable.status_ok);
-        else
+        if (secure != 0 || !gotTLSProperties)
             viewHolder.ivStatus.setImageResource(R.drawable.status_attention);
+        else
+            viewHolder.ivStatus.setImageResource(R.drawable.status_ok);
 
         //show packet Count icon
         viewHolder.ivPacketCount.setImageResource(R.drawable.packet_count);
@@ -333,7 +340,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
             Drawable wrap_lock = DrawableCompat.wrap(viewHolder.ivLock.getDrawable());
             Drawable wrap_status = DrawableCompat.wrap(viewHolder.ivStatus.getDrawable());
             DrawableCompat.setTint(wrap_lock, isHTTPS == true ? colorOn : colorOff);
-            DrawableCompat.setTint(wrap_status, isGood == true ? colorOn : colorOff);
+            DrawableCompat.setTint(wrap_status, secure == 1 ? colorOn : colorOff);
         }
 
         // Show destination address
@@ -350,8 +357,6 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
         if(listExpanded.get((int)pos)) {
 
             viewHolder.llAnalysisExpanded.setVisibility(View.VISIBLE);
-            // FIXME: not needed?
-            cursor.moveToPosition((int)pos);
 
             long sessionId = (cursor.isNull(colSessionId) ? -1 : cursor.getLong(colSessionId));
             int version = (cursor.isNull(colSessionVersion) ? -1 : cursor.getInt(colSessionVersion));
@@ -369,13 +374,28 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
                 //show TLS properties
                 int cipherIndex = CipherLookup.getCipherIndex(cipher);
                 viewHolder.llHTTPS.setVisibility(View.VISIBLE);
+
                 viewHolder.tvTLSversion.setText("    TLS Version: " + getTLSName(TLSversion));
+                if(secure == 1)
+                    viewHolder.tvTLSversion.setTextColor(Color.RED);
+
+                // sometime we dont get the cipher suit (Facebook)
+                if(getTLSName(TLSversion) == "undef") {
+                    viewHolder.tvTLSversion.setTextColor(Color.RED);
+                }
+
                 viewHolder.tvCipherProtocol.setText("    Cipher Protocol: " + CipherLookup.getCipherProtocol(cipherIndex));
                 viewHolder.tvKxAlgo.setText("    Key Exchange Algorithm: " + CipherLookup.getKxAlgo(cipherIndex));
                 viewHolder.tvAuthAlgo.setText("    Authentication Algorithm: " + CipherLookup.getAuthAlgo(cipherIndex));
                 viewHolder.tvHashAlgo.setText("    Hash Algorithm: " + CipherLookup.getHashAlgo(cipherIndex));
+
                 viewHolder.tvSymEncAlgo.setText("    Symmetric Encryption Algorithm: " + CipherLookup.getSymEncAlgo(cipherIndex));
+                if(secure == 2)
+                    viewHolder.tvSymEncAlgo.setTextColor(Color.RED);
+
                 viewHolder.tvSymEncKeySize.setText("    Symmetric Encryption Key Size: " + CipherLookup.getSymEncKeySize(cipherIndex));
+                if(secure == 3)
+                    viewHolder.tvSymEncKeySize.setTextColor(Color.RED);
             }
             else
                 viewHolder.llHTTPS.setVisibility(View.GONE);
@@ -415,7 +435,7 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
             viewHolder.tvPacketsReceived.setText("    Packets Received: " + Integer.toString(pdown));
             viewHolder.tvpacketsSent.setText("    Packets Sent: " + Integer.toString(pup));
 
-            // TODO: show packets
+            //lvPayload.removeAllViews();
             Cursor packetsCursor = DatabaseHelper.getInstance(context).getSessionPackets(sessionId);
             Log.d(TAG, "PACKETS: " + packetsCursor.getCount());
             AdapterPacket adapter = new AdapterPacket(context, packetsCursor);
@@ -441,26 +461,6 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
             default:
                 return "undef";
         }
-    }
-
-    public boolean isKnownAddress(String addr) {
-        try {
-            InetAddress a = InetAddress.getByName(addr);
-            if (a.equals(dns1) || a.equals(dns2) || a.equals(vpn4) || a.equals(vpn6))
-                return true;
-        } catch (UnknownHostException ignored) {
-        }
-        return false;
-    }
-
-    public boolean isIncomingPacket(String addr) {
-        try {
-            InetAddress a = InetAddress.getByName(addr);
-            if (a.equals(vpn4) || a.equals(vpn6))
-                return true;
-        } catch (UnknownHostException ignored) {
-        }
-        return false;
     }
 
     private String getKnownPort(int port) {
@@ -508,8 +508,6 @@ public class AdapterAnalysis extends CursorRecyclerViewAdapter<AdapterAnalysis.V
                 }
                 else {
                     // set the new cursor
-                    //query = query.toString().toLowerCase().trim();
-                    //todo: add udp, tcp, other to searchlog
                     cursor = DatabaseHelper.getInstance(context).searchSessions(query.toString());
                 }
 

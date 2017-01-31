@@ -1239,7 +1239,6 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
         *(options + 7) = 0; // End, padding
     }
 
-    // TODO: check (ports are switched)
     dport = ntohs(tcp->source);
     sport = ntohs(tcp->dest);
 
@@ -1268,7 +1267,6 @@ ssize_t write_tcp(const struct arguments *args, const struct tcp_session *cur,
 
     ssize_t res = write(args->tun, buffer, len);
 
-    // TODO: in log
     struct sslData sslData;
     memset(&sslData, NULL, sizeof(struct sslData));
 

@@ -241,12 +241,6 @@ public class ActivityAnalysis extends AppCompatActivity implements SharedPrefere
                 updateAdapter();
                 return true;
 
-            case R.id.menu_anaysis_alert:
-                item.setChecked(!item.isChecked());
-                prefs.edit().putBoolean("alert", item.isChecked()).apply();
-                // TODO: maybe add ServiceSinkhole code?
-                return true;
-
             case R.id.menu_analysis_clear:
                 new AsyncTask<Object, Object, Object>() {
                     @Override

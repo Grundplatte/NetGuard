@@ -169,6 +169,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 ", data BLOB" +
                 ", flags TEXT" +
                 ", direction INTEGER NULL" +
+                ", secure INTEGER NULL" +
                 ");");
         db.execSQL("CREATE INDEX idx_sessionPackets_time ON sessionPackets(time)");
         db.execSQL("CREATE INDEX idx_sessionPackets_dest ON sessionPackets(daddr)");
@@ -198,6 +199,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 ", flags TEXT" +
                 ", pup INTEGER NULL" +
                 ", pdown INTEGER NULL" +
+                ", secure INTEGER NULL" +
                 ");");
         db.execSQL("CREATE INDEX idx_sessions_time ON sessions(time)");
         db.execSQL("CREATE INDEX idx_sessions_dest ON sessions(daddr)");
@@ -543,7 +545,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // Sessions
-    public long insertSession(SessionPacket packet, String dname, boolean direction) {
+    public long insertSession(SessionPacket packet, String dname, boolean direction, int secure) {
         mLock.writeLock().lock();
         long sessionId = -1;
         try {
@@ -603,6 +605,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     cv.put("pdown", 1);
                 }
 
+                    cv.put("secure", secure);
+
                 sessionId = db.insert("sessions", null, cv);
                 if (sessionId == -1)
                     Log.e(TAG, "Insert sessions failed");
@@ -618,7 +622,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         return sessionId;
     }
 
-    public void updateSession(SessionPacket packet, long sessionId, boolean direction) {
+    public void updateSession(SessionPacket packet, long sessionId, boolean direction, int secure) {
         mLock.writeLock().lock();
         try {
             SQLiteDatabase db = this.getWritableDatabase();
@@ -632,36 +636,43 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                 }
 
                 if(packet.TLSversion != 0) {
-                    String sql1 = "UPDATE sessions SET";
-                    sql1 += " TLSversion = IFNULL(TLSversion, ?)";
-                    sql1 += " WHERE ID = ?";
-                    db.execSQL(sql1, new String[]{Integer.toString(packet.TLSversion), Long.toString(sessionId)});
+                    String sql2 = "UPDATE sessions SET";
+                    sql2 += " TLSversion = IFNULL(TLSversion, ?)";
+                    sql2 += " WHERE ID = ?";
+                    db.execSQL(sql2, new String[]{Integer.toString(packet.TLSversion), Long.toString(sessionId)});
                 }
 
                 if(packet.cipher != 0) {
-                    String sql2 = "UPDATE sessions SET";
-                    sql2 += " cipher = IFNULL(cipher, ?)";
-                    sql2 += " WHERE ID = ?";
-                    db.execSQL(sql2, new String[]{Integer.toString(packet.cipher), Long.toString(sessionId)});
+                    String sql3 = "UPDATE sessions SET";
+                    sql3 += " cipher = IFNULL(cipher, ?)";
+                    sql3 += " WHERE ID = ?";
+                    db.execSQL(sql3, new String[]{Integer.toString(packet.cipher), Long.toString(sessionId)});
                 }
 
                 if(direction) {
-                    String sql3 = "UPDATE sessions SET";
-                    sql3 += " pup = pup + 1";
-                    sql3 += " WHERE ID = ?";
-                    db.execSQL(sql3, new String[]{Long.toString(sessionId)});
+                    String sql4 = "UPDATE sessions SET";
+                    sql4 += " pup = pup + 1";
+                    sql4 += " WHERE ID = ?";
+                    db.execSQL(sql4, new String[]{Long.toString(sessionId)});
                 }
                 else {
-                    String sql3 = "UPDATE sessions SET";
-                    sql3 += " pdown = pdown + 1";
-                    sql3 += " WHERE ID = ?";
-                    db.execSQL(sql3, new String[]{Long.toString(sessionId)});
+                    String sql4 = "UPDATE sessions SET";
+                    sql4 += " pdown = pdown + 1";
+                    sql4 += " WHERE ID = ?";
+                    db.execSQL(sql4, new String[]{Long.toString(sessionId)});
                 }
 
-                String sql3 = "UPDATE sessions SET";
-                sql3 += " time = ?";
-                sql3 += " WHERE ID = ?";
-                db.execSQL(sql3, new String[]{Long.toString(packet.time), Long.toString(sessionId)});
+                if(secure != 0) {
+                    String sql5 = "UPDATE sessions SET";
+                    sql5 += " secure = ?";
+                    sql5 += " WHERE ID = ?";
+                    db.execSQL(sql5, new String[]{Integer.toString(secure), Long.toString(sessionId)});
+                }
+
+                String sql6 = "UPDATE sessions SET";
+                sql6 += " time = ?";
+                sql6 += " WHERE ID = ?";
+                db.execSQL(sql6, new String[]{Long.toString(packet.time), Long.toString(sessionId)});
 
                 db.setTransactionSuccessful();
             } finally {
@@ -754,7 +765,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     }
 
     // SessionPackets
-    public void insertSessionPacket(SessionPacket packet, String dname, long sessionId, boolean direction) {
+    public void insertSessionPacket(SessionPacket packet, String dname, long sessionId, boolean direction, int secure) {
         mLock.writeLock().lock();
         try {
             SQLiteDatabase db = this.getWritableDatabase();
@@ -807,6 +818,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
                 cv.put("direction", direction);
 
+                cv.put("secure", secure);
 
                 if (db.insert("sessionPackets", null, cv) == -1)
                     Log.e(TAG, "Insert sessionPackets failed");
